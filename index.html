@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Opti Runner - Platform Game</title>
+    <link rel="icon" type="image/png" href="assets/sprites/icon.png">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>Opti Runner</h1>
+        </div>
+        
+        <div class="canvas-container">
+            <div class="score-board">
+                <span>Score: <span id="score">0</span></span>
+            </div>
+            <div class="opti-board">
+                <span>$OPTI: <span id="opti">0</span></span>
+            </div>
+            <canvas id="gameCanvas" width="1200" height="600"></canvas>
+            
+            <!-- Sound Control Button -->
+            <div class="sound-control" id="soundControl">
+                <button id="soundToggleBtn" title="Toggle Sound">
+                    <span id="soundIcon">🔊</span>
+                </button>
+            </div>
+            
+            <!-- Start button overlay on game screen -->
+            <div class="game-start-overlay" id="gameStartOverlay">
+                            <div class="start-content">
+                <div class="username-input-container">
+                    <input type="text" id="usernameInput" placeholder="Enter your username" maxlength="20">
+                </div>
+                <button id="startBtn">Start Game</button>
+                <button id="leaderboardBtn">Leaderboard</button>
+                <button class="market-btn" disabled>
+                    Market
+                    <div class="coming-soon-popup">Coming Soon...</div>
+                </button>
+            </div>
+            
+            <!-- How to Play button -->
+            <button class="how-to-play-btn" id="howToPlayBtn">How to Play</button>
+            </div>
+            
+            <!-- Pause overlay -->
+            <div class="game-pause-overlay" id="gamePauseOverlay" style="display: none;">
+                <div class="pause-content">
+                    <h2>Game Paused</h2>
+                    <button id="continueBtn">Continue</button>
+                    <button id="mainMenuBtn">Main Menu</button>
+                </div>
+            </div>
+            
+            <!-- Leaderboard overlay -->
+            <div class="leaderboard-overlay" id="leaderboardOverlay" style="display: none;">
+                <div class="leaderboard-content">
+                    <button class="close-btn" id="closeLeaderboardBtn">&times;</button>
+                    <h2>Leaderboard</h2>
+                    <div class="leaderboard-loading" id="leaderboardLoading">
+                        <div class="loading-spinner"></div>
+                        <p>Loading leaderboard...</p>
+                    </div>
+                    <div class="leaderboard-list" id="leaderboardList" style="display: none;">
+                        <!-- Leaderboard entries will be populated here -->
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <!-- How to Play overlay -->
+            <div class="how-to-play-overlay" id="howToPlayOverlay" style="display: none;">
+                <div class="how-to-play-content">
+                    <button class="close-btn" id="closeHowToPlayBtn">&times;</button>
+                    <h2>How to Play</h2>
+                    <div class="game-instructions">
+                        <div class="instruction-section">
+                            <h3>🎮 Basic Controls</h3>
+                            <p><strong>Spacebar:</strong> Jump</p>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <h3>🏆 Tips</h3>
+                            <p>• Time your jumps carefully</p>
+                            <p>• Watch out for increasing obstacle speed</p>
+                            <p>• Try to collect every bonus item</p>
+                            <p>• Practice makes perfect!</p>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <h3>🎯 Game Objective</h3>
+                            <p>Run as far as possible while avoiding obstacles!</p>
+                            <p>Collect bonus items to increase your score and earn $OPTI points.</p>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <h3>💰 $OPTI Points</h3>
+                            <p>• Collect bonus items to earn $OPTI points</p>
+                            <p>• $OPTI points are permanent and don't reset when you lose</p>
+                            <p>• Use $OPTI points in the Market to unlock special bonus features</p>
+                        </div>
+                        
+                        <div class="instruction-section">
+                            <h3>🛒 Market Features (Coming Soon)</h3>
+                            <p>• Double Jump Ability</p>
+                            <p>• Shield Protection</p>
+                            <p>• Score Multipliers</p>
+                            <p>• Special Characters</p>
+                            <p>• And much more!</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-controls">
+            <p>Created By <a href="https://x.com/cryptoperseus_" target="_blank" style="color: #4ecdc4; text-decoration: none; font-weight: bold; transition: color 0.3s ease;">Perseus</a></p>
+        </div>
+        
+        <div class="game-over" id="gameOver" style="display: none;">
+            <h2>Game Over!</h2>
+            <p>Your Score: <span id="finalScore">0</span></p>
+            <button id="playAgainBtn">Play Again</button>
+            <button id="mainMenuBtnGameOver">Main Menu</button>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Import the functions you need from the SDKs you need
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
+
+        // Your web app's Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyBly4unuEXK77aNOacYRfIyxEXXwIVOIL4",
+            authDomain: "optimum-game-leaderboard.firebaseapp.com",
+            projectId: "optimum-game-leaderboard",
+            storageBucket: "optimum-game-leaderboard.firebasestorage.app",
+            messagingSenderId: "236511208004",
+            appId: "1:236511208004:web:67b905a0a65785cb6cd211",
+            measurementId: "G-7NMTBKW8FX"
+        };
+
+        // Initialize Firebase
+        const app = initializeApp(firebaseConfig);
+        const analytics = getAnalytics(app);
+        const db = getFirestore(app);
+
+        // Make Firebase available globally
+        window.firebaseApp = app;
+        window.firebaseDB = db;
+        window.firebaseFunctions = { collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc };
+    </script>
+    
+    <script src="game.js"></script>
+</body>
+</html>

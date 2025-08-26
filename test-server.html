@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Server - Opti Runner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        h1 {
+            color: #FF6B6B;
+            margin-bottom: 20px;
+        }
+        .server-info {
+            background: rgba(0, 0, 0, 0.3);
+            padding: 20px;
+            border-radius: 15px;
+            margin: 20px 0;
+        }
+        .btn {
+            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
+            color: white;
+            padding: 15px 30px;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            cursor: pointer;
+            margin: 10px;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.3);
+        }
+        .status {
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+        }
+        .success {
+            background: rgba(76, 175, 80, 0.3);
+            border: 1px solid #4CAF50;
+        }
+        .error {
+            background: rgba(244, 67, 54, 0.3);
+            border: 1px solid #F44336;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🚀 Opti Runner - Test Server</h1>
+        
+        <div class="server-info">
+            <h3>📡 Local Server Information</h3>
+            <p><strong>Port:</strong> 8000</p>
+            <p><strong>URL:</strong> <code>http://localhost:8000</code></p>
+            <p><strong>Main Game:</strong> <code>http://localhost:8000/index.html</code></p>
+        </div>
+        
+        <div class="status success">
+            ✅ Server is running! Click the link below to test the game.
+        </div>
+        
+        <div style="margin: 30px 0;">
+            <a href="http://localhost:8000/index.html" class="btn">🎮 Open Game</a>
+            <a href="http://localhost:8000" class="btn">📁 File List</a>
+        </div>
+        
+        <div class="server-info">
+            <h3>🔧 How to Run:</h3>
+            <ol style="text-align: left; display: inline-block;">
+                <li>Go to the project folder in Terminal/PowerShell</li>
+                <li>Run the command: <code>python -m http.server 8000</code></li>
+                <li>Go to <code>http://localhost:8000</code> in your browser</li>
+                <li>Test the game!</li>
+            </ol>
+        </div>
+        
+        <div class="status success">
+            💡 <strong>Important:</strong> Use local server to prevent CORS errors and test GIF animations!
+        </div>
+    </div>
+</body>
+</html>

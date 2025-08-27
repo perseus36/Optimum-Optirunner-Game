@@ -6,6 +6,8 @@
 # API Keys and Secrets
 config.js
 secrets.js
+firebase-admin-sdk.json
+*.json
 
 # Dependencies
 node_modules/

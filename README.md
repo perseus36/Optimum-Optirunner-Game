@@ -76,20 +76,26 @@ Optimum Game/
 ### Security Setup (IMPORTANT!)
 Before running the game, you need to set up your Firebase configuration:
 
-1. Copy `config.js` and fill in your Firebase credentials:
+1. **IMPORTANT**: Your API keys were exposed in a previous commit. You MUST:
+   - Go to [Google Cloud Console](https://console.cloud.google.com/) and revoke the old API key
+   - Create a new API key
+   - Update your Firebase project with the new key
+
+2. Copy `config.js` and fill in your NEW Firebase credentials:
 ```javascript
 const firebaseConfig = {
-    apiKey: "YOUR_ACTUAL_API_KEY",
-    authDomain: "YOUR_ACTUAL_AUTH_DOMAIN",
-    projectId: "YOUR_ACTUAL_PROJECT_ID",
-    storageBucket: "YOUR_ACTUAL_STORAGE_BUCKET",
-    messagingSenderId: "YOUR_ACTUAL_MESSAGING_SENDER_ID",
-    appId: "YOUR_ACTUAL_APP_ID",
-    measurementId: "YOUR_ACTUAL_MEASUREMENT_ID"
+    apiKey: "YOUR_NEW_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+    appId: "YOUR_APP_ID",
+    measurementId: "YOUR_MEASUREMENT_ID"
 };
 ```
 
-2. **NEVER commit your actual API keys to git!**
+3. **NEVER commit your actual API keys to git!**
+4. **Close the GitHub security alert** after rotating your keys
 
 ### Local Development
 1. Clone the project:

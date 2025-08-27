@@ -136,16 +136,27 @@
         import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
-        // Your web app's Firebase configuration
-        const firebaseConfig = {
-            apiKey: "AIzaSyBly4unuEXK77aNOacYRfIyxEXXwIVOIL4",
-            authDomain: "optimum-game-leaderboard.firebaseapp.com",
-            projectId: "optimum-game-leaderboard",
-            storageBucket: "optimum-game-leaderboard.firebasestorage.app",
-            messagingSenderId: "236511208004",
-            appId: "1:236511208004:web:67b905a0a65785cb6cd211",
-            measurementId: "G-7NMTBKW8FX"
-        };
+        // Firebase configuration will be loaded from config.js
+        // For security, sensitive keys are stored separately
+        let firebaseConfig;
+        
+        // Try to load from config file, fallback to placeholder
+        try {
+            const configModule = await import('./config.js');
+            firebaseConfig = configModule.firebaseConfig;
+        } catch (error) {
+            console.warn('Config file not found. Please create config.js with your Firebase configuration.');
+            // Placeholder config - replace with actual values
+            firebaseConfig = {
+                apiKey: "YOUR_API_KEY_HERE",
+                authDomain: "YOUR_AUTH_DOMAIN_HERE",
+                projectId: "YOUR_PROJECT_ID_HERE",
+                storageBucket: "YOUR_STORAGE_BUCKET_HERE",
+                messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
+                appId: "YOUR_APP_ID_HERE",
+                measurementId: "YOUR_MEASUREMENT_ID_HERE"
+            };
+        }
 
         // Initialize Firebase
         const app = initializeApp(firebaseConfig);

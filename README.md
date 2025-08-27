@@ -73,6 +73,24 @@ Optimum Game/
 
 ## 🚀 Installation
 
+### Security Setup (IMPORTANT!)
+Before running the game, you need to set up your Firebase configuration:
+
+1. Copy `config.js` and fill in your Firebase credentials:
+```javascript
+const firebaseConfig = {
+    apiKey: "YOUR_ACTUAL_API_KEY",
+    authDomain: "YOUR_ACTUAL_AUTH_DOMAIN",
+    projectId: "YOUR_ACTUAL_PROJECT_ID",
+    storageBucket: "YOUR_ACTUAL_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_ACTUAL_MESSAGING_SENDER_ID",
+    appId: "YOUR_ACTUAL_APP_ID",
+    measurementId: "YOUR_ACTUAL_MEASUREMENT_ID"
+};
+```
+
+2. **NEVER commit your actual API keys to git!**
+
 ### Local Development
 1. Clone the project:
 ```bash

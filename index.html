@@ -60,13 +60,33 @@
             <div class="leaderboard-overlay" id="leaderboardOverlay" style="display: none;">
                 <div class="leaderboard-content">
                     <button class="close-btn" id="closeLeaderboardBtn">&times;</button>
-                    <h2>Leaderboard</h2>
-                    <div class="leaderboard-loading" id="leaderboardLoading">
-                        <div class="loading-spinner"></div>
-                        <p>Loading leaderboard...</p>
+                    
+                    <!-- Leaderboard Type Buttons -->
+                    <div class="leaderboard-type-buttons">
+                        <button class="lb-type-btn" id="globalLbBtn">Global</button>
+                        <button class="lb-type-btn active" id="weeklyLbBtn">Weekly</button>
                     </div>
-                    <div class="leaderboard-list" id="leaderboardList" style="display: none;">
-                        <!-- Leaderboard entries will be populated here -->
+                    
+                    <!-- Weekly Leaderboard Section -->
+                    <div class="weekly-leaderboard-section" id="weeklyLeaderboardSection">
+                        <div class="weekly-leaderboard-loading" id="weeklyLeaderboardLoading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading weekly leaderboard...</p>
+                        </div>
+                        <div class="weekly-leaderboard-list" id="weeklyLeaderboardList" style="display: none;">
+                            <!-- Weekly leaderboard entries will be populated here -->
+                        </div>
+                    </div>
+                    
+                    <!-- Global Leaderboard Section -->
+                    <div class="global-leaderboard-section" id="globalLeaderboardSection" style="display: none;">
+                        <div class="leaderboard-loading" id="leaderboardLoading">
+                            <div class="loading-spinner"></div>
+                            <p>Loading leaderboard...</p>
+                        </div>
+                        <div class="leaderboard-list" id="leaderboardList" style="display: none;">
+                            <!-- Leaderboard entries will be populated here -->
+                        </div>
                     </div>
                     
                 </div>
@@ -133,40 +153,47 @@
     <script type="module">
         // Import the functions you need from the SDKs you need
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc, where } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
         import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-analytics.js";
 
-        // Firebase configuration will be loaded from config.js
-        // For security, sensitive keys are stored separately
-        let firebaseConfig;
-        
-        // Try to load from config file, fallback to placeholder
-        try {
-            const configModule = await import('./config.js');
-            firebaseConfig = configModule.firebaseConfig;
-        } catch (error) {
-            console.warn('Config file not found. Please create config.js with your Firebase configuration.');
-            // Placeholder config - replace with actual values
-            firebaseConfig = {
-                apiKey: "YOUR_API_KEY_HERE",
-                authDomain: "YOUR_AUTH_DOMAIN_HERE",
-                projectId: "YOUR_PROJECT_ID_HERE",
-                storageBucket: "YOUR_STORAGE_BUCKET_HERE",
-                messagingSenderId: "YOUR_MESSAGING_SENDER_ID_HERE",
-                appId: "YOUR_APP_ID_HERE",
-                measurementId: "YOUR_MEASUREMENT_ID_HERE"
-            };
-        }
+        // Firebase configuration
+        const firebaseConfig = {
+            apiKey: "AIzaSyAxiGfnvb1QHDza9Swu56riVX0fb5Ql1Mo",
+            authDomain: "optimum-game-leaderboard.firebaseapp.com",
+            projectId: "optimum-game-leaderboard",
+            storageBucket: "optimum-game-leaderboard.firebasestorage.app",
+            messagingSenderId: "236511208004",
+            appId: "1:236511208004:web:67b90c8c8c8c8c8c8c8c8c",
+            measurementId: "G-XXXXXXXXXX"
+        };
 
         // Initialize Firebase
+        console.log('=== FIREBASE INITIALIZATION DEBUG ===');
+        console.log('Firebase config:', firebaseConfig);
         const app = initializeApp(firebaseConfig);
+        console.log('Firebase app initialized:', !!app);
         const analytics = getAnalytics(app);
+        console.log('Analytics initialized:', !!analytics);
         const db = getFirestore(app);
+        console.log('Firestore DB initialized:', !!db);
 
-        // Make Firebase available globally
-        window.firebaseApp = app;
+        // Expose Firebase objects globally
         window.firebaseDB = db;
-        window.firebaseFunctions = { collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc };
+        window.firebaseFunctions = {
+            collection, addDoc, getDocs, query, orderBy, limit, onSnapshot, deleteDoc, doc, where
+        };
+        console.log('Firebase initialized successfully');
+        console.log('Global Firebase objects:', {
+            firebaseDB: !!window.firebaseDB,
+            firebaseFunctions: !!window.firebaseFunctions,
+            functions: Object.keys(window.firebaseFunctions)
+        });
+
+        // Dispatch event when Firebase is ready
+        window.firebaseReady = true;
+        const event = new Event('firebaseReady');
+        window.dispatchEvent(event);
+        console.log('Firebase ready event dispatched');
     </script>
     
     <script src="game.js"></script>

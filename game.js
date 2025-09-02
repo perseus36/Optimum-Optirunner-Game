@@ -21,6 +21,7 @@ class Game {
         this.username = localStorage.getItem('username') || '';
         this.leaderboardVisible = false;
         this.howToPlayVisible = false;
+        this.weeklyLeaderboardUnsubscribe = null;
         
         // Main character
         this.player = {
@@ -404,6 +405,15 @@ class Game {
                 console.log('Window lost focus - auto-pausing game');
                 this.autoPause();
             }
+        });
+        
+        // Leaderboard type buttons
+        document.getElementById('weeklyLbBtn').addEventListener('click', () => {
+            this.switchToWeeklyLeaderboard();
+        });
+        
+        document.getElementById('globalLbBtn').addEventListener('click', () => {
+            this.switchToGlobalLeaderboard();
         });
     }
     
@@ -956,6 +966,10 @@ class Game {
     }
     
     endGame() {
+        console.log('=== GAME ENDED ===');
+        console.log('Final score:', this.score);
+        console.log('Username:', this.username);
+        
         this.gameRunning = false;
         this.gameOver = true;
         
@@ -966,6 +980,7 @@ class Game {
         this.stopBackgroundMusic();
         
         // Save score to leaderboard
+        console.log('Calling saveToLeaderboard...');
         this.saveToLeaderboard(this.username, this.score);
         
         document.getElementById('finalScore').textContent = this.score;
@@ -1389,6 +1404,34 @@ class Game {
     showLeaderboard() {
         document.getElementById('leaderboardOverlay').style.display = 'flex';
         this.leaderboardVisible = true;
+        
+        // Show weekly leaderboard by default
+        this.switchToWeeklyLeaderboard();
+    }
+    
+    switchToWeeklyLeaderboard() {
+        // Update button states
+        document.getElementById('weeklyLbBtn').classList.add('active');
+        document.getElementById('globalLbBtn').classList.remove('active');
+        
+        // Show weekly section, hide global section
+        document.getElementById('weeklyLeaderboardSection').style.display = 'block';
+        document.getElementById('globalLeaderboardSection').style.display = 'none';
+        
+        // Populate weekly leaderboard
+        this.populateWeeklyLeaderboard();
+    }
+    
+    switchToGlobalLeaderboard() {
+        // Update button states
+        document.getElementById('globalLbBtn').classList.add('active');
+        document.getElementById('weeklyLbBtn').classList.remove('active');
+        
+        // Show global section, hide weekly section
+        document.getElementById('globalLeaderboardSection').style.display = 'block';
+        document.getElementById('weeklyLeaderboardSection').style.display = 'none';
+        
+        // Populate global leaderboard
         this.populateLeaderboard();
     }
     
@@ -1511,6 +1554,12 @@ class Game {
             this.leaderboardUnsubscribe();
             this.leaderboardUnsubscribe = null;
         }
+        
+        // Clean up weekly leaderboard listener
+        if (this.weeklyLeaderboardUnsubscribe) {
+            this.weeklyLeaderboardUnsubscribe();
+            this.weeklyLeaderboardUnsubscribe = null;
+        }
     }
     
     showHowToPlay() {
@@ -1532,12 +1581,24 @@ class Game {
     
     async saveToLeaderboard(username, score) {
         try {
+            console.log('=== SAVING TO LEADERBOARD ===');
+            console.log('Username:', username);
+            console.log('Score:', score);
+            console.log('Firebase DB available:', !!window.firebaseDB);
+            console.log('Firebase Functions available:', !!window.firebaseFunctions);
+            
             // Check if Firebase is available
             if (!window.firebaseDB || !window.firebaseFunctions) {
                 console.warn('Firebase not available, falling back to localStorage');
                 this.saveToLeaderboardLocal(username, score);
                 return;
             }
+
+            console.log('Firebase connection test:', {
+                firebaseDB: !!window.firebaseDB,
+                firebaseFunctions: !!window.firebaseFunctions,
+                functions: Object.keys(window.firebaseFunctions)
+            });
 
             const { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } = window.firebaseFunctions;
             const db = window.firebaseDB;
@@ -1585,6 +1646,9 @@ class Game {
                 });
                 console.log(`New score added for ${username}: ${score}`);
             }
+
+            // Save to weekly leaderboard
+            await this.saveToWeeklyLeaderboard(username, score);
 
         } catch (error) {
             console.error('Error saving to Firebase:', error);
@@ -1650,6 +1714,258 @@ class Game {
         }
     }
     
+    // Weekly Leaderboard Functions
+    // REMOVED - Will be reimplemented from scratch
+    
+    // NEW: Basic Weekly Leaderboard Functions
+    getWeekStart(date) {
+        const d = new Date(date);
+        const day = d.getDay();
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday as start of week
+        const weekStart = new Date(d.setDate(diff));
+        weekStart.setHours(0, 0, 0, 0); // Reset time to start of day
+        return weekStart;
+    }
+    
+    async saveToWeeklyLeaderboard(username, score) {
+        try {
+            console.log('=== SAVING TO WEEKLY LEADERBOARD ===');
+            console.log('Username:', username);
+            console.log('Score:', score);
+            
+            if (!window.firebaseDB || !window.firebaseFunctions) {
+                console.warn('Firebase not available for weekly leaderboard');
+                return;
+            }
+
+            const { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, where } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            console.log('Week start:', weekStart.toISOString());
+
+            // Check if user already has a weekly score for this week
+            const weeklyQuery = query(
+                collection(db, 'weekly_scores'),
+                where('username', '==', username),
+                where('weekStart', '==', weekStart.toISOString())
+            );
+            
+            const weeklySnapshot = await getDocs(weeklyQuery);
+            let userExists = false;
+            let existingScore = 0;
+            let existingDocId = null;
+
+            weeklySnapshot.forEach((docSnapshot) => {
+                const data = docSnapshot.data();
+                if (data.username === username) {
+                    userExists = true;
+                    existingScore = data.score;
+                    existingDocId = docSnapshot.id;
+                }
+            });
+
+            if (userExists) {
+                // Update existing score only if new score is higher
+                if (score > existingScore) {
+                    // Delete old score and add new one
+                    await deleteDoc(doc(db, 'weekly_scores', existingDocId));
+                    await addDoc(collection(db, 'weekly_scores'), {
+                        username: username,
+                        score: score,
+                        weekStart: weekStart.toISOString(),
+                        date: new Date().toISOString()
+                    });
+                    console.log(`Updated weekly score for ${username}: ${existingScore} → ${score}`);
+                } else {
+                    console.log(`Weekly score not updated for ${username}: ${score} ≤ ${existingScore}`);
+                }
+            } else {
+                // Add new user weekly score
+                await addDoc(collection(db, 'weekly_scores'), {
+                    username: username,
+                    score: score,
+                    weekStart: weekStart.toISOString(),
+                    date: new Date().toISOString()
+                });
+                console.log(`New weekly score added for ${username}: ${score}`);
+            }
+
+        } catch (error) {
+            console.error('Error saving to weekly leaderboard:', error);
+        }
+    }
+    
+    async populateWeeklyLeaderboard() {
+        console.log('=== POPULATING WEEKLY LEADERBOARD ===');
+        
+        const weeklyLeaderboardList = document.getElementById('weeklyLeaderboardList');
+        const weeklyLeaderboardLoading = document.getElementById('weeklyLeaderboardLoading');
+        
+        // Show loading
+        weeklyLeaderboardLoading.style.display = 'flex';
+        weeklyLeaderboardList.style.display = 'none';
+        
+        try {
+            if (!window.firebaseDB || !window.firebaseFunctions) {
+                throw new Error('Firebase not initialized');
+            }
+            
+            const { collection, query, orderBy, limit, onSnapshot, where } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            console.log('Current week start:', weekStart.toISOString());
+            
+            // Use real-time listener with where clause
+            const q = query(
+                collection(db, 'weekly_scores'),
+                where('weekStart', '==', weekStart.toISOString()),
+                orderBy('score', 'desc'),
+                limit(20)
+            );
+            
+            console.log('Real-time query created successfully');
+            
+            // Set up real-time listener
+            this.weeklyLeaderboardUnsubscribe = onSnapshot(q, (querySnapshot) => {
+                const scores = [];
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    console.log('Real-time document data:', data);
+                    scores.push({
+                        id: doc.id,
+                        ...data
+                    });
+                });
+                
+                console.log('Real-time weekly scores for current week:', scores.length);
+                this.displayWeeklyLeaderboard(scores);
+            }, (error) => {
+                console.error('Real-time listener error:', error);
+                // Fallback to getDocs if index is not ready
+                this.populateWeeklyLeaderboardFallback();
+            });
+            
+        } catch (error) {
+            console.error('Firebase error in populateWeeklyLeaderboard:', error);
+            this.showWeeklyLeaderboardError('Weekly leaderboard not available yet');
+        }
+    }
+    
+    // Fallback method using getDocs (no index required)
+    async populateWeeklyLeaderboardFallback() {
+        console.log('=== USING FALLBACK METHOD ===');
+        
+        try {
+            const { collection, query, orderBy, limit, getDocs } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            const q = query(
+                collection(db, 'weekly_scores'),
+                orderBy('score', 'desc'),
+                limit(20)
+            );
+            
+            const querySnapshot = await getDocs(q);
+            const scores = [];
+            
+            querySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.weekStart === weekStart.toISOString()) {
+                    scores.push({
+                        id: doc.id,
+                        ...data
+                    });
+                }
+            });
+            
+            this.displayWeeklyLeaderboard(scores);
+            
+        } catch (error) {
+            console.error('Fallback method error:', error);
+            this.showWeeklyLeaderboardError('Weekly leaderboard not available yet');
+        }
+    }
+    
+    displayWeeklyLeaderboard(scores) {
+        const weeklyLeaderboardList = document.getElementById('weeklyLeaderboardList');
+        const weeklyLeaderboardLoading = document.getElementById('weeklyLeaderboardLoading');
+        
+        // Hide loading
+        weeklyLeaderboardLoading.style.display = 'none';
+        weeklyLeaderboardList.style.display = 'flex';
+        
+        weeklyLeaderboardList.innerHTML = '';
+        
+        if (scores.length === 0) {
+            weeklyLeaderboardList.innerHTML = `
+                <div style="text-align: center; padding: 20px;">
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 1rem;">No scores this week yet. Be the first!</p>
+                </div>
+            `;
+            return;
+        }
+        
+        scores.forEach((entry, index) => {
+            const rank = index + 1;
+            const entryElement = document.createElement('div');
+            entryElement.className = `leaderboard-entry rank-${rank}`;
+            
+            const rankClass = rank <= 3 ? `rank-${rank}` : '';
+            if (rankClass) {
+                entryElement.classList.add(rankClass);
+            }
+            
+            // Medal emojis for top 3, numbers for others
+            let rankDisplay;
+            if (rank === 1) {
+                rankDisplay = '🥇';
+            } else if (rank === 2) {
+                rankDisplay = '🥈';
+            } else if (rank === 3) {
+                rankDisplay = '🥉';
+            } else {
+                rankDisplay = `#${rank}`;
+            }
+            
+            entryElement.innerHTML = `
+                <div class="leaderboard-rank">${rankDisplay}</div>
+                <div class="leaderboard-username">${entry.username}</div>
+                <div class="leaderboard-score">${entry.score}</div>
+            `;
+            
+            weeklyLeaderboardList.appendChild(entryElement);
+        });
+        
+        // Refresh button removed
+    }
+    
+    showWeeklyLeaderboardError(message) {
+        const weeklyLeaderboardList = document.getElementById('weeklyLeaderboardList');
+        const weeklyLeaderboardLoading = document.getElementById('weeklyLeaderboardLoading');
+        
+        weeklyLeaderboardLoading.style.display = 'none';
+        weeklyLeaderboardList.style.display = 'flex';
+        
+        weeklyLeaderboardList.innerHTML = `
+            <div style="text-align: center; padding: 15px;">
+                <p style="color: #ff6b6b; font-size: 1rem; margin-bottom: 10px;">⚠️ ${message}</p>
+                <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem;">
+                    Weekly leaderboard is being set up
+                </p>
+            </div>
+        `;
+    }
+    
 
     
     gameLoop() {
@@ -1661,5 +1977,12 @@ class Game {
 
 // Start the game
 window.addEventListener('load', () => {
-    new Game();
+    // Wait for Firebase to be ready
+    if (window.firebaseReady) {
+        new Game();
+    } else {
+        window.addEventListener('firebaseReady', () => {
+            new Game();
+        });
+    }
 });

@@ -7,61 +7,47 @@
   [![License](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](LICENSE)
 </div>
 
-## 🚀 Oyun Hakkında
+## 🚀 About the Game
 
-**Optimum Runner**, modern web teknolojileri ile geliştirilmiş heyecan verici bir platform oyunudur. Karakterinizi kontrol ederek engellerin üzerinden atlayın, bonus eşyaları toplayın ve yüksek skorlar elde edin!
+**Optimum Runner** is an exciting platform game developed with modern web technologies. Control your character to jump over obstacles, collect bonus items, and achieve high scores!
 
-### ✨ Özellikler
+### ✨ Features
 
-- 🎯 **Dinamik Oynanış**: Zamanla artan zorluk seviyesi
-- 🎵 **Müzik Sistemi**: Arka plan müziği ve ses efektleri
-- 🏆 **Skor Sistemi**: Yerel ve global liderlik tabloları
-- 💎 **Bonus Sistemi**: $OPTI tokenları kazanın
-- 🌤️ **Görsel Efektler**: Animasyonlu bulutlar ve sprite'lar
-- 📱 **Responsive Tasarım**: Tüm cihazlarda mükemmel görünüm
+- 🎯 **Dynamic Gameplay**: Increasing difficulty level over time
+- 🎵 **Music System**: Background music and sound effects
+- 🏆 **Score System**: Local and global leaderboards
+- 💎 **Bonus System**: Earn $OPTI tokens
+- 🌤️ **Visual Effects**: Animated clouds and sprites
+- 📱 **Responsive Design**: Perfect appearance on all devices
 
-## 🎮 Nasıl Oynanır
+## 🎮 How to Play
 
-### Temel Kontroller
-- **Spacebar**: Zıplama
-- **ESC**: Oyunu duraklatma
-- **Mouse**: Menü navigasyonu
+### Basic Controls
+- **Spacebar**: Jump
+- **ESC**: Pause game
+- **Mouse**: Menu navigation
 
-### Oyun Amacı
-- Engellerin üzerinden atlayarak mümkün olduğunca uzağa koşun
-- Bonus eşyaları toplayarak $OPTI tokenları kazanın
-- Liderlik tablosunda üst sıralarda yer almak için yüksek skorlar elde edin
-- Zamanla artan zorluk seviyelerine karşı dayanın
+### Game Objective
+- Run as far as possible by jumping over obstacles
+- Collect bonus items to earn $OPTI tokens
+- Achieve high scores to rank on the leaderboard
+- Endure against increasing difficulty levels over time
 
-## 🚀 Hemen Oyna
+## 🚀 Play Now
 
-**Canlı Demo**: [Optimum Runner](https://cryptoperseus.github.io/optimum-runner)
+**Live Demo**: [Optimum Runner](https://cryptoperseus.github.io/optimum-runner)
 
-### Yerel Geliştirme
-1. Projeyi klonlayın:
-```bash
-git clone https://github.com/cryptoperseus/optimum-runner.git
-cd optimum-runner
-```
+## 👨‍💻 Developer
 
-2. HTTP sunucusu başlatın:
-```bash
-python -m http.server 8000
-```
+**Optimum Runner** - Created by [@cryptoperseus_](https://x.com/cryptoperseus_)
 
-3. `http://localhost:8000` adresini tarayıcınızda açın
+## 📝 License
 
-## 👨‍💻 Geliştirici
-
-**Optimum Runner** - [@cryptoperseus_](https://x.com/cryptoperseus_) tarafından geliştirilmiştir.
-
-## 📝 Lisans
-
-Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
 
 ---
 
 <div align="center">
-  <p>⭐ Bu projeyi beğendiyseniz yıldızlamayı unutmayın!</p>
-  <p>🎮 İyi eğlenceler!</p>
+  <p>⭐ Don't forget to star this project if you liked it!</p>
+  <p>🎮 Have fun!</p>
 </div>

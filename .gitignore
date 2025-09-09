@@ -2,15 +2,18 @@
 .env
 .env.local
 .env.production
+.env.development
 
 # API Keys and Secrets
 config.js
 secrets.js
 firebase-admin-sdk.json
+firebase-config.js
 *.json
 
 # Dependencies
 node_modules/
+package-lock.json
 
 # Build files
 dist/
@@ -19,11 +22,26 @@ build/
 # IDE files
 .vscode/
 .idea/
+*.swp
+*.swo
 
 # OS files
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
 npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
+# Security
+*.pem
+*.key
+*.crt

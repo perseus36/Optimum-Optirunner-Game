@@ -18,6 +18,12 @@ class Game {
         this.score = 0;
         this.opti = parseInt(localStorage.getItem('opti')) || 0; // $OPTI value, retrieved from localStorage
 
+        // Anti-cheat tracking
+        this.gameStartTime = null;
+        this.gameEndTime = null;
+        this.jumpCount = 0;
+        this.totalGameTime = 0;
+
         this.username = localStorage.getItem('username') || '';
         this.leaderboardVisible = false;
         this.howToPlayVisible = false;
@@ -175,6 +181,9 @@ class Game {
         
         // Check if username exists and auto-fill input
         this.checkSavedUsername();
+        
+        // Clean up duplicate scores on startup
+        this.cleanupDuplicateScores();
         
         // Game loop
         this.gameLoop();
@@ -438,6 +447,19 @@ class Game {
         this.gamePaused = false;
         this.score = 0;
         // this.opti sıfırlanmaz - kalıcı olarak saklanır
+        
+        // Reset anti-cheat tracking
+        this.gameStartTime = Date.now();
+        this.gameEndTime = null;
+        this.jumpCount = 0;
+        this.totalGameTime = 0;
+        
+        // Anti-cheat: Prevent score manipulation at start
+        if (this.score !== 0) {
+            console.warn('🚨 Score manipulation detected at game start - resetting');
+            this.score = 0;
+        }
+        
         this.obstacles = [];
         this.bonuses = [];
         this.frameCount = 0;
@@ -621,6 +643,7 @@ class Game {
         if (!this.player.jumping) {
             this.player.velocityY = this.player.jumpPower;
             this.player.jumping = true;
+            this.jumpCount++; // Increment jump counter for anti-cheat
         }
     }
     
@@ -830,15 +853,21 @@ class Game {
              if (!obstacle.passed && obstacle.x + obstacle.width < this.player.x) {
                  obstacle.passed = true;
                  
-                 // Giant obstacles give 2 points, normal obstacles give 1 point
-                 if (obstacle.isGiant && obstacle.giantActivated) {
-                     this.score += 2;
-                     console.log(`🚀 Giant obstacle passed! +2 points (Total: ${this.score})`);
-                 } else {
-                     this.score += 1;
-                 }
-                 
-                 this.updateUI();
+                // Giant obstacles give 2 points, normal obstacles give 1 point
+                if (obstacle.isGiant && obstacle.giantActivated) {
+                    this.score += 2;
+                    console.log(`🚀 Giant obstacle passed! +2 points (Total: ${this.score})`);
+                } else {
+                    this.score += 1;
+                }
+                
+                // Anti-cheat: Prevent score manipulation
+                if (this.score < 0) {
+                    console.warn('🚨 Score manipulation detected - resetting to 0');
+                    this.score = 0;
+                }
+                
+                this.updateUI();
              }
             
             // Collision check
@@ -880,6 +909,13 @@ class Game {
                 this.score += 3; // Bonus points
                 this.opti += 1; // $OPTI value increases by 1
                 localStorage.setItem('opti', this.opti.toString()); // saved to localStorage
+                
+                // Anti-cheat: Prevent score manipulation
+                if (this.score < 0) {
+                    console.warn('🚨 Score manipulation detected - resetting to 0');
+                    this.score = 0;
+                }
+                
                 this.updateUI();
                 console.log('Bonus collected! +3 points, +1 $OPTI');
             }
@@ -973,20 +1009,103 @@ class Game {
         this.gameRunning = false;
         this.gameOver = true;
         
+        // Record game end time and calculate total game time
+        this.gameEndTime = Date.now();
+        this.totalGameTime = this.gameEndTime - this.gameStartTime;
+        
+        console.log('Game duration:', this.totalGameTime, 'ms');
+        console.log('Jump count:', this.jumpCount);
+        
         // Play death sound
         this.playDeathSound();
         
         // Stop background music
         this.stopBackgroundMusic();
         
-        // Save score to leaderboard
-        console.log('Calling saveToLeaderboard...');
+        // Strict anti-cheat validation
+        const isValidScore = this.validateScore(score);
+        if (!isValidScore) {
+            console.warn('🚫 Suspicious score detected - SCORE REJECTED AND NOT SAVED');
+            alert('Şüpheli skor tespit edildi! Skorunuz kaydedilmedi. Lütfen oyunu düzgün oynayın.');
+            document.getElementById('finalScore').textContent = this.score;
+            document.getElementById('gameOver').style.display = 'block';
+            return; // Exit without saving
+        }
+        
+        // Save score to leaderboard only if validation passes
+        console.log('✅ Score validation passed - saving to leaderboard');
         this.saveToLeaderboard(this.username, this.score);
         
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOver').style.display = 'block';
         
         this.updateUI();
+    }
+    
+    // Basic anti-cheat validation
+    validateScore(score) {
+        const gameTimeSeconds = this.totalGameTime / 1000;
+        const jumpsPerSecond = this.jumpCount / gameTimeSeconds;
+        const scorePerSecond = score / gameTimeSeconds;
+        
+        console.log('Anti-cheat validation:');
+        console.log('- Game time:', gameTimeSeconds.toFixed(2), 'seconds');
+        console.log('- Jump count:', this.jumpCount);
+        console.log('- Jumps per second:', jumpsPerSecond.toFixed(2));
+        console.log('- Score per second:', scorePerSecond.toFixed(2));
+        
+        // Strict checks to prevent manual score injection
+        const suspiciousChecks = [];
+        
+        // Check 1: Minimum game time requirement (at least 5 seconds)
+        if (gameTimeSeconds < 5) {
+            suspiciousChecks.push(`Game too short: ${gameTimeSeconds.toFixed(2)}s (minimum 5s required)`);
+        }
+        
+        // Check 2: Minimum jump requirement (at least 3 jumps)
+        if (this.jumpCount < 3) {
+            suspiciousChecks.push(`Too few jumps: ${this.jumpCount} (minimum 3 required)`);
+        }
+        
+        // Check 3: Maximum score per second (more than 50 points per second is suspicious)
+        if (scorePerSecond > 50) {
+            suspiciousChecks.push(`High score rate: ${scorePerSecond.toFixed(2)} points/sec (max 50)`);
+        }
+        
+        // Check 4: Maximum jump rate (more than 2 jumps per second is suspicious)
+        if (jumpsPerSecond > 2) {
+            suspiciousChecks.push(`High jump rate: ${jumpsPerSecond.toFixed(2)} jumps/sec (max 2)`);
+        }
+        
+        // Check 5: Very short game time with high score (less than 10 seconds, more than 300 points)
+        if (gameTimeSeconds < 10 && score > 300) {
+            suspiciousChecks.push(`Short game with high score: ${gameTimeSeconds.toFixed(2)}s, ${score} points`);
+        }
+        
+        // Check 6: Very high score with very few jumps (more than 500 points, less than 5 jumps)
+        if (score > 500 && this.jumpCount < 5) {
+            suspiciousChecks.push(`High score with few jumps: ${score} points, ${this.jumpCount} jumps`);
+        }
+        
+        // Check 7: Impossible score patterns (score too high for game time)
+        const maxPossibleScore = gameTimeSeconds * 30; // Maximum 30 points per second realistically
+        if (score > maxPossibleScore) {
+            suspiciousChecks.push(`Impossible score: ${score} points in ${gameTimeSeconds.toFixed(2)}s (max possible: ${maxPossibleScore.toFixed(0)})`);
+        }
+        
+        // Check 8: No jumps but high score (impossible)
+        if (this.jumpCount === 0 && score > 0) {
+            suspiciousChecks.push(`Score without jumps: ${score} points (impossible)`);
+        }
+        
+        if (suspiciousChecks.length > 0) {
+            console.warn('🚨 Suspicious activity detected - SCORE REJECTED:');
+            suspiciousChecks.forEach(check => console.warn(`  - ${check}`));
+            return false;
+        }
+        
+        console.log('✅ Score validation passed');
+        return true;
     }
     
     updateUI() {
@@ -1579,6 +1698,46 @@ class Game {
         return leaderboard ? JSON.parse(leaderboard) : [];
     }
     
+    // Anti-cheat validation function
+    validateScore(score) {
+        // Check if score is reasonable based on game mechanics
+        const maxPossibleScore = this.calculateMaxPossibleScore();
+        
+        // Basic validation
+        if (typeof score !== 'number' || score < 0 || !isFinite(score)) {
+            console.error('❌ Invalid score type or value');
+            return false;
+        }
+        
+        // Check if score is suspiciously high
+        if (score > maxPossibleScore * 1.5) { // Allow 50% buffer for edge cases
+            console.error(`❌ Suspiciously high score: ${score} (max possible: ${maxPossibleScore})`);
+            return false;
+        }
+        
+        // Check game duration vs score ratio
+        if (this.totalGameTime > 0) {
+            const scorePerSecond = score / (this.totalGameTime / 1000);
+            if (scorePerSecond > 50) { // More than 50 points per second is suspicious
+                console.error(`❌ Suspicious score rate: ${scorePerSecond} points/second`);
+                return false;
+            }
+        }
+        
+        return true;
+    }
+    
+    calculateMaxPossibleScore() {
+        // Estimate maximum possible score based on game mechanics
+        // This is a rough calculation - adjust based on your game's scoring system
+        const maxJumps = this.jumpCount || 100; // Assume max 100 jumps
+        const maxTime = 300; // 5 minutes max game time
+        const pointsPerJump = 10; // Average points per successful jump
+        const timeBonus = maxTime * 2; // Time bonus
+        
+        return (maxJumps * pointsPerJump) + timeBonus;
+    }
+
     async saveToLeaderboard(username, score) {
         try {
             console.log('=== SAVING TO LEADERBOARD ===');
@@ -1586,6 +1745,12 @@ class Game {
             console.log('Score:', score);
             console.log('Firebase DB available:', !!window.firebaseDB);
             console.log('Firebase Functions available:', !!window.firebaseFunctions);
+            
+            // Anti-cheat validation
+            if (!this.validateScore(score)) {
+                console.error('❌ Invalid score detected - possible cheating attempt');
+                return;
+            }
             
             // Check if Firebase is available
             if (!window.firebaseDB || !window.firebaseFunctions) {
@@ -1600,28 +1765,47 @@ class Game {
                 functions: Object.keys(window.firebaseFunctions)
             });
 
-            const { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc } = window.firebaseFunctions;
+            const { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, where } = window.firebaseFunctions;
             const db = window.firebaseDB;
 
-            // Check if user already has a score
+            // Check if user already has a score - improved query to prevent duplicates
             const userQuery = query(
                 collection(db, 'scores'),
-                orderBy('username', 'asc')
+                where('username', '==', username)
             );
             
             const userSnapshot = await getDocs(userQuery);
             let userExists = false;
             let existingScore = 0;
             let existingDocId = null;
+            let duplicateDocIds = []; // Track all duplicate entries for this user
 
             userSnapshot.forEach((docSnapshot) => {
                 const data = docSnapshot.data();
                 if (data.username === username) {
-                    userExists = true;
-                    existingScore = data.score;
-                    existingDocId = docSnapshot.id;
+                    duplicateDocIds.push(docSnapshot.id);
+                    
+                    // Keep track of the highest existing score
+                    if (data.score > existingScore) {
+                        existingScore = data.score;
+                        existingDocId = docSnapshot.id;
+                    }
                 }
             });
+
+            // If user has multiple entries, clean them up first
+            if (duplicateDocIds.length > 1) {
+                console.log(`Found ${duplicateDocIds.length} duplicate entries for ${username}, cleaning up...`);
+                for (const docId of duplicateDocIds) {
+                    if (docId !== existingDocId) {
+                        await deleteDoc(doc(db, 'scores', docId));
+                        console.log(`Deleted duplicate entry for ${username}`);
+                    }
+                }
+                userExists = true; // User exists with the highest score
+            } else if (duplicateDocIds.length === 1) {
+                userExists = true; // User exists with one entry
+            }
 
             if (userExists) {
                 // Update existing score only if new score is higher
@@ -1631,7 +1815,10 @@ class Game {
                     await addDoc(collection(db, 'scores'), {
                         username: username,
                         score: score,
-                        date: new Date().toISOString()
+                        date: new Date().toISOString(),
+                        gameDuration: this.totalGameTime,
+                        jumpCount: this.jumpCount,
+                        validated: true // Mark as validated
                     });
                     console.log(`Updated score for ${username}: ${existingScore} → ${score}`);
                 } else {
@@ -1642,18 +1829,87 @@ class Game {
                 await addDoc(collection(db, 'scores'), {
                     username: username,
                     score: score,
-                    date: new Date().toISOString()
+                    date: new Date().toISOString(),
+                    gameDuration: this.totalGameTime,
+                    jumpCount: this.jumpCount,
+                    validated: true // Mark as validated
                 });
                 console.log(`New score added for ${username}: ${score}`);
             }
-
-            // Save to weekly leaderboard
-            await this.saveToWeeklyLeaderboard(username, score);
 
         } catch (error) {
             console.error('Error saving to Firebase:', error);
             // Fallback to localStorage
             this.saveToLeaderboardLocal(username, score);
+        }
+        
+        // Always try to save to weekly leaderboard, regardless of Firebase status
+        try {
+            await this.saveToWeeklyLeaderboard(username, score);
+        } catch (weeklyError) {
+            console.error('Weekly leaderboard save failed:', weeklyError);
+        }
+    }
+    
+    // Function to clean up existing duplicate scores in database
+    async cleanupDuplicateScores() {
+        try {
+            console.log('=== CLEANING UP DUPLICATE SCORES ===');
+            
+            if (!window.firebaseDB || !window.firebaseFunctions) {
+                console.warn('Firebase not available for cleanup');
+                return;
+            }
+
+            const { collection, getDocs, deleteDoc, doc } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+
+            // Get all scores
+            const allScoresSnapshot = await getDocs(collection(db, 'scores'));
+            const userScores = new Map(); // username -> {highestScore, docId, allDocIds}
+            
+            // Group scores by username
+            allScoresSnapshot.forEach((docSnapshot) => {
+                const data = docSnapshot.data();
+                const username = data.username;
+                
+                if (!userScores.has(username)) {
+                    userScores.set(username, {
+                        highestScore: data.score,
+                        docId: docSnapshot.id,
+                        allDocIds: []
+                    });
+                }
+                
+                const userData = userScores.get(username);
+                userData.allDocIds.push(docSnapshot.id);
+                
+                // Keep track of highest score
+                if (data.score > userData.highestScore) {
+                    userData.highestScore = data.score;
+                    userData.docId = docSnapshot.id;
+                }
+            });
+            
+            // Delete duplicate entries
+            let deletedCount = 0;
+            for (const [username, userData] of userScores) {
+                if (userData.allDocIds.length > 1) {
+                    console.log(`Found ${userData.allDocIds.length} entries for ${username}, keeping highest score: ${userData.highestScore}`);
+                    
+                    for (const docId of userData.allDocIds) {
+                        if (docId !== userData.docId) {
+                            await deleteDoc(doc(db, 'scores', docId));
+                            deletedCount++;
+                        }
+                    }
+                }
+            }
+            
+            console.log(`✅ Cleanup complete: Deleted ${deletedCount} duplicate entries`);
+            
+        } catch (error) {
+            console.error('❌ Error during cleanup:', error);
         }
     }
     
@@ -1721,7 +1977,8 @@ class Game {
     getWeekStart(date) {
         const d = new Date(date);
         const day = d.getDay();
-        const diff = d.getDate() - day + (day === 0 ? -6 : 1); // Monday as start of week
+        // Monday as start of week (0 = Sunday, 1 = Monday, etc.)
+        const diff = d.getDate() - day + (day === 0 ? -6 : 1);
         const weekStart = new Date(d.setDate(diff));
         weekStart.setHours(0, 0, 0, 0); // Reset time to start of day
         return weekStart;
@@ -1734,68 +1991,222 @@ class Game {
             console.log('Score:', score);
             
             if (!window.firebaseDB || !window.firebaseFunctions) {
-                console.warn('Firebase not available for weekly leaderboard');
+                console.warn('Firebase not available for weekly leaderboard - skipping');
                 return;
             }
 
-            const { collection, addDoc, getDocs, query, orderBy, deleteDoc, doc, where } = window.firebaseFunctions;
+            const { collection, addDoc, getDocs, deleteDoc, doc } = window.firebaseFunctions;
             const db = window.firebaseDB;
 
             // Get current week start
             const now = new Date();
             const weekStart = this.getWeekStart(now);
             
+            console.log('Current date:', now.toISOString());
             console.log('Week start:', weekStart.toISOString());
 
-            // Check if user already has a weekly score for this week
-            const weeklyQuery = query(
-                collection(db, 'weekly_scores'),
-                where('username', '==', username),
-                where('weekStart', '==', weekStart.toISOString())
-            );
-            
-            const weeklySnapshot = await getDocs(weeklyQuery);
+            // Get all weekly scores for current week
+            const weeklyScoresSnapshot = await getDocs(collection(db, 'weekly_scores'));
             let userExists = false;
             let existingScore = 0;
             let existingDocId = null;
+            let duplicateDocIds = []; // Track all duplicate entries for this user
 
-            weeklySnapshot.forEach((docSnapshot) => {
+            // Check if user already has a score for this week
+            weeklyScoresSnapshot.forEach((docSnapshot) => {
                 const data = docSnapshot.data();
-                if (data.username === username) {
-                    userExists = true;
-                    existingScore = data.score;
-                    existingDocId = docSnapshot.id;
+                if (data.username === username && data.weekStart === weekStart.toISOString()) {
+                    duplicateDocIds.push(docSnapshot.id);
+                    
+                    // Keep track of the highest existing score
+                    if (data.score > existingScore) {
+                        existingScore = data.score;
+                        existingDocId = docSnapshot.id;
+                    }
                 }
             });
+
+            // If user has multiple entries, clean them up first
+            if (duplicateDocIds.length > 1) {
+                console.log(`Found ${duplicateDocIds.length} duplicate entries for ${username}, cleaning up...`);
+                for (const docId of duplicateDocIds) {
+                    if (docId !== existingDocId) {
+                        await deleteDoc(doc(db, 'weekly_scores', docId));
+                        console.log(`Deleted duplicate entry for ${username}`);
+                    }
+                }
+                userExists = true; // User exists with the highest score
+            } else if (duplicateDocIds.length === 1) {
+                userExists = true; // User exists with one entry
+            }
 
             if (userExists) {
                 // Update existing score only if new score is higher
                 if (score > existingScore) {
-                    // Delete old score and add new one
+                    console.log(`Updating weekly score for ${username}: ${existingScore} → ${score}`);
                     await deleteDoc(doc(db, 'weekly_scores', existingDocId));
                     await addDoc(collection(db, 'weekly_scores'), {
                         username: username,
                         score: score,
                         weekStart: weekStart.toISOString(),
-                        date: new Date().toISOString()
+                        date: new Date().toISOString(),
+                        gameDuration: this.totalGameTime,
+                        jumpCount: this.jumpCount
                     });
-                    console.log(`Updated weekly score for ${username}: ${existingScore} → ${score}`);
+                    console.log(`✅ Updated weekly score for ${username}: ${existingScore} → ${score}`);
                 } else {
-                    console.log(`Weekly score not updated for ${username}: ${score} ≤ ${existingScore}`);
+                    console.log(`❌ Weekly score not updated for ${username}: ${score} ≤ ${existingScore}`);
                 }
             } else {
-                // Add new user weekly score
+                console.log(`Adding new weekly score for ${username}: ${score}`);
                 await addDoc(collection(db, 'weekly_scores'), {
                     username: username,
                     score: score,
                     weekStart: weekStart.toISOString(),
-                    date: new Date().toISOString()
+                    date: new Date().toISOString(),
+                    gameDuration: this.totalGameTime,
+                    jumpCount: this.jumpCount
                 });
-                console.log(`New weekly score added for ${username}: ${score}`);
+                console.log(`✅ New weekly score added for ${username}: ${score}`);
             }
 
+            // Keep only top 20 weekly scores for current week
+            await this.cleanupWeeklyLeaderboard();
+            
+            // Also clean up any duplicates that might exist
+            await this.cleanupDuplicateWeeklyScores();
+
         } catch (error) {
-            console.error('Error saving to weekly leaderboard:', error);
+            console.error('❌ Error saving to weekly leaderboard:', error);
+        }
+    }
+    
+    // Function to clean up duplicate weekly scores
+    async cleanupDuplicateWeeklyScores() {
+        try {
+            console.log('=== CLEANING UP DUPLICATE WEEKLY SCORES ===');
+            
+            if (!window.firebaseDB || !window.firebaseFunctions) {
+                console.warn('Firebase not available for cleanup');
+                return;
+            }
+
+            const { collection, getDocs, deleteDoc, doc } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            // Get all weekly scores for current week
+            const weeklyScoresSnapshot = await getDocs(collection(db, 'weekly_scores'));
+            const userScores = new Map(); // username -> {highestScore, docId, allDocIds}
+            
+            // Group scores by username
+            weeklyScoresSnapshot.forEach((docSnapshot) => {
+                const data = docSnapshot.data();
+                if (data.weekStart === weekStart.toISOString()) {
+                    const username = data.username;
+                    
+                    if (!userScores.has(username)) {
+                        userScores.set(username, {
+                            highestScore: data.score,
+                            docId: docSnapshot.id,
+                            allDocIds: [docSnapshot.id]
+                        });
+                    } else {
+                        const userData = userScores.get(username);
+                        userData.allDocIds.push(docSnapshot.id);
+                        
+                        if (data.score > userData.highestScore) {
+                            userData.highestScore = data.score;
+                            userData.docId = docSnapshot.id;
+                        }
+                    }
+                }
+            });
+            
+            // Delete duplicate entries
+            let deletedCount = 0;
+            for (const [username, userData] of userScores) {
+                if (userData.allDocIds.length > 1) {
+                    console.log(`Found ${userData.allDocIds.length} entries for ${username}, keeping highest score: ${userData.highestScore}`);
+                    
+                    for (const docId of userData.allDocIds) {
+                        if (docId !== userData.docId) {
+                            await deleteDoc(doc(db, 'weekly_scores', docId));
+                            deletedCount++;
+                        }
+                    }
+                }
+            }
+            
+            console.log(`✅ Cleanup completed: ${deletedCount} duplicate entries deleted`);
+            
+        } catch (error) {
+            console.error('❌ Error cleaning up duplicates:', error);
+        }
+    }
+    
+    // Cleanup function to keep only top 20 weekly scores
+    async cleanupWeeklyLeaderboard() {
+        try {
+            const { collection, getDocs, deleteDoc, doc, query, orderBy, limit, where } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            console.log('=== CLEANUP WEEKLY LEADERBOARD ===');
+            console.log('Week start:', weekStart.toISOString());
+            
+            // Get all weekly scores for current week, ordered by score
+            const weeklyQuery = query(
+                collection(db, 'weekly_scores'),
+                where('weekStart', '==', weekStart.toISOString()),
+                orderBy('score', 'desc')
+            );
+            
+            const weeklySnapshot = await getDocs(weeklyQuery);
+            const currentWeekScores = [];
+            
+            console.log('Total weekly scores for current week:', weeklySnapshot.size);
+            
+            // Process all scores (already filtered by where clause)
+            weeklySnapshot.forEach((docSnapshot) => {
+                const data = docSnapshot.data();
+                currentWeekScores.push({
+                    id: docSnapshot.id,
+                    ...data
+                });
+            });
+            
+            console.log('Current week scores to process:', currentWeekScores.length);
+            
+            // Sort by score (highest first) - should already be sorted by query
+            currentWeekScores.sort((a, b) => b.score - a.score);
+            
+            // Keep only top 20, delete the rest
+            if (currentWeekScores.length > 20) {
+                const scoresToDelete = currentWeekScores.slice(20);
+                console.log(`Cleaning up weekly leaderboard: deleting ${scoresToDelete.length} scores`);
+                
+                for (const score of scoresToDelete) {
+                    try {
+                        await deleteDoc(doc(db, 'weekly_scores', score.id));
+                        console.log(`🗑️ Deleted weekly score: ${score.username} (${score.score})`);
+                    } catch (error) {
+                        console.error(`Failed to delete score ${score.id}:`, error);
+                    }
+                }
+                
+                console.log(`✅ Weekly leaderboard cleanup completed: kept top 20 scores`);
+            } else {
+                console.log(`✅ Weekly leaderboard has ${currentWeekScores.length} scores (≤20, no cleanup needed)`);
+            }
+            
+        } catch (error) {
+            console.error('Error cleaning up weekly leaderboard:', error);
         }
     }
     
@@ -1814,7 +2225,7 @@ class Game {
                 throw new Error('Firebase not initialized');
             }
             
-            const { collection, query, orderBy, limit, onSnapshot, where } = window.firebaseFunctions;
+            const { collection, getDocs, query, orderBy, limit } = window.firebaseFunctions;
             const db = window.firebaseDB;
             
             // Get current week start
@@ -1822,64 +2233,21 @@ class Game {
             const weekStart = this.getWeekStart(now);
             console.log('Current week start:', weekStart.toISOString());
             
-            // Use real-time listener with where clause
-            const q = query(
-                collection(db, 'weekly_scores'),
-                where('weekStart', '==', weekStart.toISOString()),
-                orderBy('score', 'desc'),
-                limit(20)
-            );
-            
-            console.log('Real-time query created successfully');
-            
-            // Set up real-time listener
-            this.weeklyLeaderboardUnsubscribe = onSnapshot(q, (querySnapshot) => {
-                const scores = [];
-                querySnapshot.forEach((doc) => {
-                    const data = doc.data();
-                    console.log('Real-time document data:', data);
-                    scores.push({
-                        id: doc.id,
-                        ...data
-                    });
-                });
-                
-                console.log('Real-time weekly scores for current week:', scores.length);
-                this.displayWeeklyLeaderboard(scores);
-            }, (error) => {
-                console.error('Real-time listener error:', error);
-                // Fallback to getDocs if index is not ready
-                this.populateWeeklyLeaderboardFallback();
-            });
-            
-        } catch (error) {
-            console.error('Firebase error in populateWeeklyLeaderboard:', error);
-            this.showWeeklyLeaderboardError('Weekly leaderboard not available yet');
-        }
-    }
-    
-    // Fallback method using getDocs (no index required)
-    async populateWeeklyLeaderboardFallback() {
-        console.log('=== USING FALLBACK METHOD ===');
-        
-        try {
-            const { collection, query, orderBy, limit, getDocs } = window.firebaseFunctions;
-            const db = window.firebaseDB;
-            
-            const now = new Date();
-            const weekStart = this.getWeekStart(now);
-            
+            // Get all weekly scores and filter client-side
             const q = query(
                 collection(db, 'weekly_scores'),
                 orderBy('score', 'desc'),
-                limit(20)
+                limit(100)
             );
             
             const querySnapshot = await getDocs(q);
             const scores = [];
             
+            console.log('Total weekly scores fetched:', querySnapshot.size);
+            
             querySnapshot.forEach((doc) => {
                 const data = doc.data();
+                // Filter for current week
                 if (data.weekStart === weekStart.toISOString()) {
                     scores.push({
                         id: doc.id,
@@ -1888,10 +2256,19 @@ class Game {
                 }
             });
             
-            this.displayWeeklyLeaderboard(scores);
+            console.log('Weekly scores found for current week:', scores.length);
+            console.log('Displaying top 20 players');
+            
+            // Sort by score (highest first)
+            scores.sort((a, b) => b.score - a.score);
+            
+            // Limit to top 20 players
+            const top20Scores = scores.slice(0, 20);
+            
+            this.displayWeeklyLeaderboard(top20Scores);
             
         } catch (error) {
-            console.error('Fallback method error:', error);
+            console.error('Firebase error in populateWeeklyLeaderboard:', error);
             this.showWeeklyLeaderboardError('Weekly leaderboard not available yet');
         }
     }
@@ -1900,6 +2277,10 @@ class Game {
         const weeklyLeaderboardList = document.getElementById('weeklyLeaderboardList');
         const weeklyLeaderboardLoading = document.getElementById('weeklyLeaderboardLoading');
         
+        console.log('=== DISPLAYING WEEKLY LEADERBOARD ===');
+        console.log('Scores to display:', scores.length, '(max 20)');
+        console.log('Scores data:', scores);
+        
         // Hide loading
         weeklyLeaderboardLoading.style.display = 'none';
         weeklyLeaderboardList.style.display = 'flex';
@@ -1907,9 +2288,13 @@ class Game {
         weeklyLeaderboardList.innerHTML = '';
         
         if (scores.length === 0) {
+            console.log('No scores found for this week');
             weeklyLeaderboardList.innerHTML = `
                 <div style="text-align: center; padding: 20px;">
                     <p style="color: rgba(255, 255, 255, 0.6); font-size: 1rem;">No scores this week yet. Be the first!</p>
+                    <p style="color: rgba(255, 255, 255, 0.4); font-size: 0.8rem; margin-top: 10px;">
+                        Current week: ${this.getWeekStart(new Date()).toLocaleDateString()}
+                    </p>
                 </div>
             `;
             return;
@@ -1953,6 +2338,9 @@ class Game {
         const weeklyLeaderboardList = document.getElementById('weeklyLeaderboardList');
         const weeklyLeaderboardLoading = document.getElementById('weeklyLeaderboardLoading');
         
+        console.log('=== WEEKLY LEADERBOARD ERROR ===');
+        console.log('Error message:', message);
+        
         weeklyLeaderboardLoading.style.display = 'none';
         weeklyLeaderboardList.style.display = 'flex';
         
@@ -1962,8 +2350,417 @@ class Game {
                 <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem;">
                     Weekly leaderboard is being set up
                 </p>
+                <div style="margin-top: 15px; text-align: center;">
+                    <p style="color: rgba(255, 255, 255, 0.6); font-size: 0.8rem;">
+                        Weekly leaderboard is being set up automatically
+                    </p>
+                </div>
             </div>
         `;
+    }
+    
+    // Test function for weekly leaderboard
+    async testWeeklyLeaderboard() {
+        console.log('=== TESTING WEEKLY LEADERBOARD ===');
+        
+        try {
+            const { collection, getDocs } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            // Get all weekly scores
+            const allWeeklyScores = await getDocs(collection(db, 'weekly_scores'));
+            console.log('Total weekly scores in database:', allWeeklyScores.size);
+            
+            allWeeklyScores.forEach((doc) => {
+                const data = doc.data();
+                console.log('Weekly score:', data);
+            });
+            
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            console.log('Current week start:', weekStart.toISOString());
+            
+            // Count scores for current week
+            let currentWeekCount = 0;
+            allWeeklyScores.forEach((doc) => {
+                const data = doc.data();
+                if (data.weekStart === weekStart.toISOString()) {
+                    currentWeekCount++;
+                    console.log('Current week score:', data);
+                }
+            });
+            
+            console.log('Scores for current week:', currentWeekCount);
+            
+            alert(`Weekly Leaderboard Test:\nTotal scores: ${allWeeklyScores.size}\nCurrent week scores: ${currentWeekCount}\nWeek start: ${weekStart.toLocaleDateString()}`);
+            
+        } catch (error) {
+            console.error('Test error:', error);
+            alert('Test failed: ' + error.message);
+        }
+    }
+    
+    // Debug function to find missing scores
+    async debugMissingScores() {
+        console.log('=== DEBUGGING MISSING SCORES ===');
+        
+        try {
+            const { collection, getDocs, query, orderBy, limit } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            console.log('Current week start:', weekStart.toISOString());
+            
+            // Get all global scores
+            const globalScoresSnapshot = await getDocs(collection(db, 'scores'));
+            console.log('Total global scores:', globalScoresSnapshot.size);
+            
+            // Get all weekly scores
+            const weeklyScoresSnapshot = await getDocs(collection(db, 'weekly_scores'));
+            console.log('Total weekly scores:', weeklyScoresSnapshot.size);
+            
+            // Create sets for comparison
+            const globalUsers = new Set();
+            const weeklyUsers = new Set();
+            const currentWeekUsers = new Set();
+            
+            // Process global scores
+            globalScoresSnapshot.forEach((doc) => {
+                const data = doc.data();
+                globalUsers.add(data.username);
+            });
+            
+            // Process weekly scores
+            weeklyScoresSnapshot.forEach((doc) => {
+                const data = doc.data();
+                weeklyUsers.add(data.username);
+                
+                if (data.weekStart === weekStart.toISOString()) {
+                    currentWeekUsers.add(data.username);
+                }
+            });
+            
+            // Find users in global but not in weekly
+            const missingFromWeekly = [];
+            globalUsers.forEach(username => {
+                if (!weeklyUsers.has(username)) {
+                    missingFromWeekly.push(username);
+                }
+            });
+            
+            // Find users in global but not in current week
+            const missingFromCurrentWeek = [];
+            globalUsers.forEach(username => {
+                if (!currentWeekUsers.has(username)) {
+                    missingFromCurrentWeek.push(username);
+                }
+            });
+            
+            console.log('Users in global leaderboard:', Array.from(globalUsers));
+            console.log('Users in weekly leaderboard:', Array.from(weeklyUsers));
+            console.log('Users in current week:', Array.from(currentWeekUsers));
+            console.log('Missing from weekly:', missingFromWeekly);
+            console.log('Missing from current week:', missingFromCurrentWeek);
+            
+            // Show detailed info
+            let report = `📊 Weekly Leaderboard Debug Report\n\n`;
+            report += `Global Leaderboard Users: ${globalUsers.size}\n`;
+            report += `Weekly Leaderboard Users: ${weeklyUsers.size}\n`;
+            report += `Current Week Users: ${currentWeekUsers.size}\n\n`;
+            
+            if (missingFromWeekly.length > 0) {
+                report += `❌ Missing from Weekly LB: ${missingFromWeekly.length}\n`;
+                missingFromWeekly.forEach(user => report += `  - ${user}\n`);
+                report += `\n`;
+            }
+            
+            if (missingFromCurrentWeek.length > 0) {
+                report += `⚠️ Missing from Current Week: ${missingFromCurrentWeek.length}\n`;
+                missingFromCurrentWeek.forEach(user => report += `  - ${user}\n`);
+            }
+            
+            if (missingFromWeekly.length === 0 && missingFromCurrentWeek.length === 0) {
+                report += `✅ All users are properly synced!`;
+            }
+            
+            alert(report);
+            
+        } catch (error) {
+            console.error('Debug error:', error);
+            alert('Debug failed: ' + error.message);
+        }
+    }
+    
+    // Function to add missing users to weekly leaderboard
+    async addMissingUsersToWeekly() {
+        console.log('=== ADDING MISSING USERS TO WEEKLY LEADERBOARD ===');
+        
+        try {
+            const { collection, getDocs, addDoc, query, orderBy, limit } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            // Get all global scores
+            const globalScoresSnapshot = await getDocs(collection(db, 'scores'));
+            
+            // Get all weekly scores for current week
+            const weeklyScoresSnapshot = await getDocs(collection(db, 'weekly_scores'));
+            
+            // Create a set of usernames that already have weekly scores
+            const existingWeeklyUsers = new Set();
+            weeklyScoresSnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.weekStart === weekStart.toISOString()) {
+                    existingWeeklyUsers.add(data.username);
+                }
+            });
+            
+            // Find missing users and add them
+            let addedCount = 0;
+            const missingUsers = [];
+            
+            globalScoresSnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (!existingWeeklyUsers.has(data.username)) {
+                    missingUsers.push(data);
+                }
+            });
+            
+            console.log('Missing users to add:', missingUsers.length);
+            
+            if (missingUsers.length === 0) {
+                alert('✅ No missing users found! All global users are already in weekly leaderboard.');
+                return;
+            }
+            
+            // Add missing users to weekly leaderboard
+            for (const userData of missingUsers) {
+                try {
+                    await addDoc(collection(db, 'weekly_scores'), {
+                        username: userData.username,
+                        score: userData.score,
+                        weekStart: weekStart.toISOString(),
+                        date: userData.date || new Date().toISOString(),
+                        migrated: true,
+                        migrationType: 'missing_users'
+                    });
+                    addedCount++;
+                    console.log(`✅ Added missing user ${userData.username} with score ${userData.score}`);
+                } catch (error) {
+                    console.error(`❌ Failed to add ${userData.username}:`, error);
+                }
+            }
+            
+            console.log(`Migration completed: ${addedCount} missing users added`);
+            alert(`✅ Missing Users Migration Completed!\n\nAdded: ${addedCount} missing users to weekly leaderboard.\n\nWeekly leaderboard should now show all players!`);
+            
+        } catch (error) {
+            console.error('❌ Migration error:', error);
+            alert('Migration failed: ' + error.message);
+        }
+    }
+    
+    // One-time migration: Add top 10 global leaderboard users to weekly leaderboard
+    async migrateTop10GlobalToWeekly() {
+        console.log('=== ONE-TIME MIGRATION: TOP 10 GLOBAL TO WEEKLY ===');
+        
+        try {
+            const { collection, getDocs, addDoc, query, orderBy, limit } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            
+            console.log('Current week start:', weekStart.toISOString());
+            
+            // Get top 10 global scores
+            const top10Query = query(
+                collection(db, 'scores'),
+                orderBy('score', 'desc'),
+                limit(10)
+            );
+            
+            const top10Snapshot = await getDocs(top10Query);
+            console.log('Top 10 global scores found:', top10Snapshot.size);
+            
+            if (top10Snapshot.size === 0) {
+                alert('❌ No global scores found!');
+                return;
+            }
+            
+            // Get existing weekly scores for current week
+            const weeklyQuery = query(
+                collection(db, 'weekly_scores'),
+                orderBy('score', 'desc'),
+                limit(20)
+            );
+            const weeklySnapshot = await getDocs(weeklyQuery);
+            
+            // Create a set of usernames that already have weekly scores
+            const existingWeeklyUsers = new Set();
+            weeklySnapshot.forEach((doc) => {
+                const data = doc.data();
+                if (data.weekStart === weekStart.toISOString()) {
+                    existingWeeklyUsers.add(data.username);
+                }
+            });
+            
+            console.log('Users already in weekly leaderboard:', Array.from(existingWeeklyUsers));
+            
+            // Add top 10 global scores to weekly leaderboard (if not already there)
+            let addedCount = 0;
+            let skippedCount = 0;
+            
+            for (const doc of top10Snapshot.docs) {
+                const data = doc.data();
+                
+                if (existingWeeklyUsers.has(data.username)) {
+                    console.log(`⏭️ Skipping ${data.username} - already in weekly leaderboard`);
+                    skippedCount++;
+                    continue;
+                }
+                
+                try {
+                    await addDoc(collection(db, 'weekly_scores'), {
+                        username: data.username,
+                        score: data.score,
+                        weekStart: weekStart.toISOString(),
+                        date: data.date || new Date().toISOString(),
+                        migrated: true, // Mark as migrated
+                        migrationType: 'top10_global'
+                    });
+                    addedCount++;
+                    console.log(`✅ Added ${data.username} with score ${data.score} to weekly leaderboard`);
+                } catch (error) {
+                    console.error(`❌ Failed to add ${data.username}:`, error);
+                }
+            }
+            
+            console.log(`Migration completed: ${addedCount} scores added, ${skippedCount} skipped`);
+            alert(`✅ Top 10 Migration Completed!\n\nAdded: ${addedCount} users\nSkipped: ${skippedCount} users (already in weekly LB)\n\nWeekly leaderboard now has the top global players!`);
+            
+        } catch (error) {
+            console.error('❌ Migration error:', error);
+            alert('Migration failed: ' + error.message);
+        }
+    }
+    
+    // Migration function to add missing scores to weekly leaderboard
+    async migrateTodayScoresToWeekly() {
+        console.log('=== MIGRATING TODAY\'S SCORES TO WEEKLY LEADERBOARD ===');
+        
+        try {
+            const { collection, getDocs, addDoc, query, where } = window.firebaseFunctions;
+            const db = window.firebaseDB;
+            
+            // Get current week start
+            const now = new Date();
+            const weekStart = this.getWeekStart(now);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            
+            console.log('Current date:', now.toISOString());
+            console.log('Week start:', weekStart.toISOString());
+            console.log('Today start:', today.toISOString());
+            
+            // Get all global scores
+            const globalScoresSnapshot = await getDocs(collection(db, 'scores'));
+            console.log('Total global scores:', globalScoresSnapshot.size);
+            
+            // Get all weekly scores for current week
+            const weeklyQuery = query(
+                collection(db, 'weekly_scores'),
+                where('weekStart', '==', weekStart.toISOString())
+            );
+            const weeklyScoresSnapshot = await getDocs(weeklyQuery);
+            console.log('Current week weekly scores:', weeklyScoresSnapshot.size);
+            
+            // Create a set of usernames that already have weekly scores
+            const existingWeeklyUsers = new Set();
+            weeklyScoresSnapshot.forEach((doc) => {
+                const data = doc.data();
+                existingWeeklyUsers.add(data.username);
+            });
+            
+            console.log('Users already in weekly leaderboard:', Array.from(existingWeeklyUsers));
+            
+            // Find global scores that should be in weekly leaderboard but aren't
+            const missingScores = [];
+            const todayScores = [];
+            
+            globalScoresSnapshot.forEach((doc) => {
+                const data = doc.data();
+                const scoreDate = new Date(data.date);
+                scoreDate.setHours(0, 0, 0, 0);
+                
+                // Check if score is from today (September 9, 2024)
+                const isToday = scoreDate.getTime() === today.getTime();
+                if (isToday) {
+                    todayScores.push({
+                        id: doc.id,
+                        ...data,
+                        scoreDate: scoreDate
+                    });
+                }
+                
+                // Check if score is from this week and user doesn't have weekly score
+                if (scoreDate >= weekStart && !existingWeeklyUsers.has(data.username)) {
+                    missingScores.push({
+                        id: doc.id,
+                        ...data,
+                        scoreDate: scoreDate
+                    });
+                }
+            });
+            
+            console.log('Scores from today (Sept 9):', todayScores.length);
+            todayScores.forEach(score => {
+                console.log('Today\'s score:', score);
+            });
+            
+            console.log('Missing scores to migrate:', missingScores.length);
+            missingScores.forEach(score => {
+                console.log('Missing score:', score);
+            });
+            
+            if (missingScores.length === 0) {
+                alert(`✅ No missing scores found!\n\nToday's scores: ${todayScores.length}\nAll global scores are already in weekly leaderboard.`);
+                return;
+            }
+            
+            // Add missing scores to weekly leaderboard
+            let addedCount = 0;
+            for (const score of missingScores) {
+                try {
+                    await addDoc(collection(db, 'weekly_scores'), {
+                        username: score.username,
+                        score: score.score,
+                        weekStart: weekStart.toISOString(),
+                        date: score.date,
+                        migrated: true // Mark as migrated
+                    });
+                    addedCount++;
+                    console.log(`✅ Added ${score.username} with score ${score.score} to weekly leaderboard`);
+                } catch (error) {
+                    console.error(`❌ Failed to add ${score.username}:`, error);
+                }
+            }
+            
+            console.log(`Migration completed: ${addedCount} scores added to weekly leaderboard`);
+            alert(`✅ Migration completed!\n\nToday's scores found: ${todayScores.length}\nMissing scores migrated: ${addedCount}\nAdded to weekly leaderboard successfully.`);
+            
+        } catch (error) {
+            console.error('❌ Migration error:', error);
+            alert('Migration failed: ' + error.message);
+        }
     }
     
 
@@ -1979,10 +2776,10 @@ class Game {
 window.addEventListener('load', () => {
     // Wait for Firebase to be ready
     if (window.firebaseReady) {
-        new Game();
+        window.game = new Game();
     } else {
         window.addEventListener('firebaseReady', () => {
-            new Game();
+            window.game = new Game();
         });
     }
 });

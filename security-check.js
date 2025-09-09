@@ -1,14 +1,14 @@
 #!/usr/bin/env node
 
 /**
- * Security Check Script for Opti Runner
+ * Security Check Script for Optimum Runner
  * This script checks for exposed API keys and security issues
  */
 
 const fs = require('fs');
 const path = require('path');
 
-console.log('🔒 Security Check for Opti Runner\n');
+console.log('🔒 Security Check for Optimum Runner\n');
 
 // Check for exposed API keys
 const apiKeyPattern = /AIza[0-9A-Za-z-_]{35}/;

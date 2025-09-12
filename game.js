@@ -3117,8 +3117,10 @@ class Game {
         const userAgent = navigator.userAgent.toLowerCase();
         let performanceMode = 'normal';
         
-        // Brave browser detection
-        if (userAgent.includes('brave')) {
+        // Brave browser detection (more reliable method)
+        if (userAgent.includes('brave') || 
+            (navigator.brave && navigator.brave.isBrave) ||
+            window.chrome && window.chrome.runtime && window.chrome.runtime.onConnect) {
             performanceMode = 'brave';
             console.log('🦁 Brave browser detected - applying optimizations');
         }
@@ -3170,18 +3172,36 @@ class Game {
         // Performance monitoring
         const startTime = performance.now();
         
-        this.update();
-        this.draw();
+        // Frame rate throttling based on browser
+        const targetFPS = this.browserPerformanceMode === 'low' || this.browserPerformanceMode === 'brave' ? 45 : 60;
+        const targetFrameTime = 1000 / targetFPS; // ms per frame
+        
+        // Skip frames if we're running too fast (especially for Chrome)
+        if (!this.lastFrameTime) {
+            this.lastFrameTime = startTime;
+            this.fpsCounter = 0;
+            this.frameSkipCounter = 0;
+        }
+        
+        const timeSinceLastFrame = startTime - this.lastFrameTime;
+        
+        // Only update if enough time has passed (throttle to target FPS)
+        if (timeSinceLastFrame >= targetFrameTime) {
+            this.update();
+            this.draw();
+            
+            // Update frame tracking
+            this.lastFrameTime = startTime;
+            this.frameSkipCounter = 0;
+        } else {
+            this.frameSkipCounter++;
+            // Still draw to maintain smooth visuals, but don't update game logic
+            this.draw();
+        }
         
         // Log performance differences between browsers
         const endTime = performance.now();
         const frameTime = endTime - startTime;
-        
-        // Real-time FPS calculation
-        if (!this.lastFrameTime) {
-            this.lastFrameTime = startTime;
-            this.fpsCounter = 0;
-        }
         
         this.fpsCounter++;
         const timeSinceLastLog = startTime - this.lastFrameTime;
@@ -3189,16 +3209,12 @@ class Game {
         // Log every second with real FPS
         if (timeSinceLastLog >= 1000) {
             const actualFPS = Math.round((this.fpsCounter * 1000) / timeSinceLastLog);
-            console.log(`🎮 Real FPS: ${actualFPS} | Frame ${this.frameCount} | ${this.browserPerformanceMode} | ${frameTime.toFixed(2)}ms`);
+            console.log(`🎮 Real FPS: ${actualFPS} | Target: ${targetFPS} | ${this.browserPerformanceMode} | Skips: ${this.frameSkipCounter}`);
             
             // Reset counters
             this.lastFrameTime = startTime;
             this.fpsCounter = 0;
-        }
-        
-        // Throttle game loop for better performance on slower browsers
-        if (frameTime > 16.67) { // If frame takes longer than 16.67ms (60fps)
-            console.warn(`Slow frame detected: ${frameTime.toFixed(2)}ms`);
+            this.frameSkipCounter = 0;
         }
         
         requestAnimationFrame(() => this.gameLoop());

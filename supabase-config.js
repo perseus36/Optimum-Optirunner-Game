@@ -57,37 +57,34 @@ const authFunctions = {
     // Sign in with Google
     async signInWithGoogle() {
         try {
-            console.log('🔐 Attempting Google sign in via Netlify Functions...');
+            console.log('🔐 Attempting Google sign in via direct Supabase...');
             
-            const response = await fetch('/.netlify/functions/supabase-proxy/auth/google', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
+            // Use direct Supabase client for OAuth
+            if (typeof window.supabase === 'undefined') {
+                console.error('❌ Supabase SDK not loaded');
+                return { success: false, error: 'Supabase SDK not loaded' };
+            }
+            
+            // Create temporary Supabase client with environment variables
+            const tempSupabase = window.supabase.createClient(
+                'https://ulkhcojuizhqwhoyxhef.supabase.co',
+                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsa2hjb2p1aXpocXdob3l4aGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MjQ3OTUsImV4cCI6MjA3MzIwMDc5NX0.3yUNb1_RRVpHPiXYiewEraQrFfcE0SAfoYCE7-Zuq84'
+            );
+            
+            const { data, error } = await tempSupabase.auth.signInWithOAuth({
+                provider: 'google',
+                options: {
                     redirectTo: window.location.origin
-                })
+                }
             });
             
-            const result = await response.json();
-            
-            if (!result.success) {
-                console.error('❌ Google sign in failed:', result.error);
-                return { success: false, error: result.error };
+            if (error) {
+                console.error('❌ Google sign in failed:', error);
+                return { success: false, error: error.message };
             }
             
-            console.log('✅ Google sign in successful via Netlify Functions');
-            console.log('📡 Response data:', result.data);
-            
-            // Redirect to Google OAuth
-            if (result.data && result.data.url) {
-                console.log('🔄 Redirecting to Google OAuth URL:', result.data.url);
-                window.location.href = result.data.url;
-                return { success: true, data: result.data };
-            } else {
-                console.error('❌ No OAuth URL received from server');
-                return { success: false, error: 'No OAuth URL received' };
-            }
+            console.log('✅ Google sign in successful, redirecting...');
+            return { success: true, data };
         } catch (error) {
             console.error('❌ Google sign in error:', error);
             return { success: false, error: error.message };

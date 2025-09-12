@@ -8,8 +8,8 @@
 # Firebase config files
 config.js
 
-# Supabase config files
-supabase-config.js
+# Supabase config files (now using Netlify Functions)
+# supabase-config.js
 
 # Node modules
 node_modules/

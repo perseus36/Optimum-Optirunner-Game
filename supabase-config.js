@@ -122,7 +122,24 @@ const authFunctions = {
     // Check if user is signed in
     isSignedIn() {
         console.log('🔍 Checking sign in status via Netlify Functions...');
-        // For now, return false - we'll implement proper auth checking later
+        
+        // Check if we have a valid session
+        const accessToken = localStorage.getItem('supabase_access_token');
+        const expiresAt = localStorage.getItem('supabase_expires_at');
+        
+        if (accessToken && expiresAt) {
+            const now = Date.now() / 1000;
+            if (now < parseInt(expiresAt)) {
+                console.log('✅ User is signed in (valid token)');
+                return true;
+            } else {
+                console.log('❌ Token expired, clearing storage');
+                localStorage.removeItem('supabase_access_token');
+                localStorage.removeItem('supabase_expires_at');
+            }
+        }
+        
+        console.log('❌ User is not signed in');
         return false;
     },
     
@@ -157,9 +174,46 @@ const authFunctions = {
 // Expose to global scope
 window.authFunctions = authFunctions;
 
+// Check for OAuth callback
+function handleOAuthCallback() {
+    const hash = window.location.hash;
+    if (hash.includes('access_token=')) {
+        console.log('🔐 OAuth callback detected');
+        
+        const params = new URLSearchParams(hash.substring(1));
+        const accessToken = params.get('access_token');
+        const expiresAt = params.get('expires_at');
+        
+        if (accessToken && expiresAt) {
+            console.log('✅ Storing OAuth tokens');
+            localStorage.setItem('supabase_access_token', accessToken);
+            localStorage.setItem('supabase_expires_at', expiresAt);
+            
+            // Clear the hash
+            window.location.hash = '';
+            
+            // Dispatch sign in event
+            window.dispatchEvent(new CustomEvent('userSignedIn', { 
+                detail: { 
+                    user: { 
+                        access_token: accessToken,
+                        expires_at: expiresAt
+                    } 
+                } 
+            }));
+            
+            console.log('✅ User signed in successfully');
+        }
+    }
+}
+
 // Initialize when DOM is ready
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', initSupabase);
+    document.addEventListener('DOMContentLoaded', () => {
+        initSupabase();
+        handleOAuthCallback();
+    });
 } else {
     initSupabase();
+    handleOAuthCallback();
 }

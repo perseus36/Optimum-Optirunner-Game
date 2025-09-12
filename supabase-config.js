@@ -123,23 +123,8 @@ const authFunctions = {
     isSignedIn() {
         console.log('🔍 Checking sign in status via Netlify Functions...');
         
-        // Check if we have a valid session
-        const accessToken = localStorage.getItem('supabase_access_token');
-        const expiresAt = localStorage.getItem('supabase_expires_at');
-        
-        if (accessToken && expiresAt) {
-            const now = Date.now() / 1000;
-            if (now < parseInt(expiresAt)) {
-                console.log('✅ User is signed in (valid token)');
-                return true;
-            } else {
-                console.log('❌ Token expired, clearing storage');
-                localStorage.removeItem('supabase_access_token');
-                localStorage.removeItem('supabase_expires_at');
-            }
-        }
-        
-        console.log('❌ User is not signed in');
+        // For now, always return false to force proper authentication
+        console.log('❌ User is not signed in (forcing authentication)');
         return false;
     },
     
@@ -166,6 +151,33 @@ const authFunctions = {
             return result.data;
         } catch (error) {
             console.error('❌ Get current user error:', error);
+            return null;
+        }
+    },
+    
+    // Get user profile (for game.js compatibility)
+    async getUserProfile() {
+        try {
+            console.log('👤 Getting user profile via Netlify Functions...');
+            
+            const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.log('ℹ️ No user profile found');
+                return null;
+            }
+            
+            console.log('✅ User profile retrieved via Netlify Functions');
+            return result.data;
+        } catch (error) {
+            console.error('❌ Get user profile error:', error);
             return null;
         }
     }

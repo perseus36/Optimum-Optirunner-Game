@@ -42,6 +42,17 @@ exports.handler = async (event, context) => {
         console.log(`📡 Request: ${httpMethod} ${path}`);
 
         // Route handling
+        if (path.includes('/auth/signout') && httpMethod === 'POST') {
+            console.log('🚪 Processing sign out request');
+            
+            // Clear any server-side session if needed
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ success: true, message: 'Signed out successfully' })
+            };
+        }
+
         if (path.includes('/auth/google') && httpMethod === 'POST') {
             console.log('🔐 Processing Google auth request');
             

@@ -130,10 +130,13 @@ const authFunctions = {
         const now = Date.now();
         const expiresAtTime = parseInt(expiresAt);
         
+        // Convert expires_at from seconds to milliseconds if needed
+        const expiresAtMs = expiresAtTime < 10000000000 ? expiresAtTime * 1000 : expiresAtTime;
+        
         // Add 5 minute buffer for token expiry
         const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
         
-        if (now >= (expiresAtTime - bufferTime)) {
+        if (now >= (expiresAtMs - bufferTime)) {
             console.log('❌ Token expired or expiring soon, clearing storage');
             localStorage.removeItem('supabase_access_token');
             localStorage.removeItem('supabase_expires_at');

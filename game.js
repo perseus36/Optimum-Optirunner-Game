@@ -1981,6 +1981,7 @@ class Game {
             const newHighestScore = Math.max(currentHighestScore, this.score);
             
             const result = await window.authFunctions.createUserProfile({
+                display_name: currentProfile.data?.display_name || 'Player',
                 highest_score: newHighestScore,
                 opti_points: newOptiPoints,
                 games_played: (currentProfile.data?.games_played || 0) + 1

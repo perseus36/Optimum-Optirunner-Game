@@ -295,8 +295,10 @@ exports.handler = async (event, context) => {
             // Only update fields that are provided
             if (data.display_name !== undefined) {
                 profileData.display_name = data.display_name;
-            } else if (!existingProfile?.display_name) {
-                profileData.display_name = user.user_metadata?.full_name || 'Player';
+            } else if (existingProfile?.display_name) {
+                profileData.display_name = existingProfile.display_name;
+            } else {
+                profileData.display_name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player';
             }
             
             if (data.highest_score !== undefined) {
@@ -404,7 +406,8 @@ exports.handler = async (event, context) => {
                 .eq('user_id', user.id)
                 .single();
             
-            const username = profile?.display_name || user.user_metadata?.full_name || 'Player';
+            const username = profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player';
+            console.log('🎯 Using username for score:', username);
             
             // Save to global scores
             console.log('🔄 Saving to global scores table...');

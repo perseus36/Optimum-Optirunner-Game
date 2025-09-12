@@ -4,7 +4,7 @@
   publish = "."
 
 [functions]
-  directory = "netlify/functions"
+  directory = "functions"
 
 # API redirects
 [[redirects]]

@@ -56,27 +56,44 @@ exports.handler = async (event, context) => {
         if (path.includes('/auth/google') && httpMethod === 'POST') {
             console.log('🔐 Processing Google auth request');
             
-            const { data: result, error } = await supabase.auth.signInWithOAuth({
-                provider: 'google',
-                options: {
-                    redirectTo: data.redirectTo || event.headers.origin
+            try {
+                const { data: result, error } = await supabase.auth.signInWithOAuth({
+                    provider: 'google',
+                    options: {
+                        redirectTo: data.redirectTo || event.headers.origin
+                    }
+                });
+                
+                if (error) {
+                    console.error('❌ Google auth error:', error);
+                    return {
+                        statusCode: 400,
+                        headers,
+                        body: JSON.stringify({ success: false, error: error.message })
+                    };
                 }
-            });
-            
-            if (error) {
-                console.error('❌ Google auth error:', error);
+                
+                console.log('✅ Google OAuth URL generated:', result.url);
+                
                 return {
-                    statusCode: 400,
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify({ 
+                        success: true, 
+                        data: { 
+                            url: result.url,
+                            provider: 'google'
+                        } 
+                    })
+                };
+            } catch (error) {
+                console.error('❌ Google auth exception:', error);
+                return {
+                    statusCode: 500,
                     headers,
                     body: JSON.stringify({ success: false, error: error.message })
                 };
             }
-            
-            return {
-                statusCode: 200,
-                headers,
-                body: JSON.stringify({ success: true, data: result })
-            };
         }
 
         // Profile operations

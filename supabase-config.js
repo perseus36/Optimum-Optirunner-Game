@@ -77,15 +77,17 @@ const authFunctions = {
             }
             
             console.log('✅ Google sign in successful via Netlify Functions');
+            console.log('📡 Response data:', result.data);
             
             // Redirect to Google OAuth
             if (result.data && result.data.url) {
-                console.log('🔄 Redirecting to Google OAuth...');
+                console.log('🔄 Redirecting to Google OAuth URL:', result.data.url);
                 window.location.href = result.data.url;
                 return { success: true, data: result.data };
+            } else {
+                console.error('❌ No OAuth URL received from server');
+                return { success: false, error: 'No OAuth URL received' };
             }
-            
-            return { success: true, data: result.data };
         } catch (error) {
             console.error('❌ Google sign in error:', error);
             return { success: false, error: error.message };

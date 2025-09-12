@@ -638,9 +638,8 @@ class Game {
     }
     
     startGame() {
-        // Check if user is signed in (use Netlify Functions if available)
-        const authFunctions = window.netlifyAuthFunctions || window.authFunctions;
-        if (!authFunctions || !authFunctions.isSignedIn()) {
+        // Check if user is signed in
+        if (!window.authFunctions || !window.authFunctions.isSignedIn()) {
             alert('Please sign in with Google to play the game!');
             return;
         }
@@ -2009,13 +2008,8 @@ class Game {
             console.log('Bonus count:', this.bonusCount);
             console.log('Total game time:', this.totalGameTime);
             console.log('Jump count:', this.jumpCount);
-            // Use Netlify Functions if available, fallback to direct Supabase
-            const authFunctions = window.netlifyAuthFunctions || window.authFunctions;
-            console.log('AuthFunctions available:', !!authFunctions);
-            console.log('Using Netlify Functions:', !!window.netlifyAuthFunctions);
-            
             // Check if user is signed in
-            if (!authFunctions || !authFunctions.isSignedIn()) {
+            if (!window.authFunctions || !window.authFunctions.isSignedIn()) {
                 console.log('❌ User not signed in - skipping score save');
                 return;
             }
@@ -2026,7 +2020,26 @@ class Game {
             
             // Update user profile with new score and OPTI points
             console.log('🔄 Updating user profile...');
-            const result = await authFunctions.updateScoreAndOpti(this.score, optiEarned);
+            
+            // First get current profile to preserve existing values
+            const currentProfile = await window.authFunctions.getUserProfile();
+            let currentOptiPoints = 0;
+            let currentHighestScore = 0;
+            
+            if (currentProfile.success && currentProfile.data) {
+                currentOptiPoints = currentProfile.data.opti_points || 0;
+                currentHighestScore = currentProfile.data.highest_score || 0;
+            }
+            
+            // Update score and OPTI points
+            const newOptiPoints = currentOptiPoints + optiEarned;
+            const newHighestScore = Math.max(currentHighestScore, this.score);
+            
+            const result = await window.authFunctions.createUserProfile({
+                highest_score: newHighestScore,
+                opti_points: newOptiPoints,
+                games_played: (currentProfile.data?.games_played || 0) + 1
+            });
             
             if (result.success) {
                 console.log('✅ Profile updated successfully');
@@ -2034,7 +2047,7 @@ class Game {
                 
                 // Save to leaderboards
                 console.log('🔄 Saving to leaderboards...');
-                const leaderboardResult = await authFunctions.saveToLeaderboard(
+                const leaderboardResult = await window.authFunctions.saveToLeaderboard(
                     this.score, 
                     optiEarned, 
                     this.totalGameTime, 

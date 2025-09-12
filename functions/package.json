@@ -1,0 +1,15 @@
+{
+  "name": "optimum-game-functions",
+  "version": "1.0.0",
+  "description": "Netlify Functions for Optimum Game",
+  "main": "supabase-proxy.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.0"
+  },
+  "keywords": ["netlify", "functions", "supabase", "game"],
+  "author": "Optimum Game",
+  "license": "MIT"
+}

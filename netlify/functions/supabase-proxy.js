@@ -119,6 +119,135 @@ exports.handler = async (event, context) => {
             };
         }
 
+        if (path.includes('/profile') && httpMethod === 'GET') {
+            console.log('👤 Processing profile request');
+            
+            // Get authorization header
+            const authHeader = event.headers.authorization || event.headers.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'No authorization token' })
+                };
+            }
+            
+            const token = authHeader.substring(7);
+            
+            // Verify token and get user
+            const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+            
+            if (authError || !user) {
+                console.error('❌ Auth error:', authError?.message);
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Invalid token' })
+                };
+            }
+            
+            // Get user profile
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            if (profileError && profileError.code !== 'PGRST116') {
+                console.error('❌ Profile error:', profileError.message);
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: profileError.message })
+                };
+            }
+            
+            console.log('✅ Profile retrieved');
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ 
+                    success: true, 
+                    data: profile || { 
+                        id: user.id, 
+                        display_name: user.user_metadata?.full_name || 'Player',
+                        email: user.email,
+                        avatar_url: user.user_metadata?.avatar_url || '',
+                        highest_score: 0,
+                        opti_points: 0,
+                        games_played: 0
+                    }
+                })
+            };
+        }
+
+        if (path.includes('/profile') && httpMethod === 'POST') {
+            console.log('👤 Processing profile creation/update request');
+            
+            // Get authorization header
+            const authHeader = event.headers.authorization || event.headers.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'No authorization token' })
+                };
+            }
+            
+            const token = authHeader.substring(7);
+            
+            // Verify token and get user
+            const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+            
+            if (authError || !user) {
+                console.error('❌ Auth error:', authError?.message);
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Invalid token' })
+                };
+            }
+            
+            // Get existing profile to preserve current values
+            const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('*')
+                .eq('id', user.id)
+                .single();
+            
+            // Create or update profile with proper merge logic
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .upsert({
+                    id: user.id,
+                    display_name: data.display_name || existingProfile?.display_name || user.user_metadata?.full_name || 'Player',
+                    email: user.email,
+                    avatar_url: user.user_metadata?.avatar_url || existingProfile?.avatar_url || '',
+                    highest_score: data.highest_score !== undefined ? data.highest_score : (existingProfile?.highest_score || 0),
+                    opti_points: data.opti_points !== undefined ? data.opti_points : (existingProfile?.opti_points || 0),
+                    games_played: data.games_played !== undefined ? data.games_played : (existingProfile?.games_played || 0),
+                    username_changed: data.username_changed !== undefined ? data.username_changed : (existingProfile?.username_changed || false)
+                })
+                .select()
+                .single();
+            
+            if (profileError) {
+                console.error('❌ Profile upsert error:', profileError.message);
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: profileError.message })
+                };
+            }
+            
+            console.log('✅ Profile created/updated');
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ success: true, data: profile })
+            };
+        }
+
         if (path.includes('/leaderboard') && httpMethod === 'POST') {
             console.log('💾 Processing save score request');
             
@@ -133,13 +262,38 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            // Get user profile for username (simplified - in real app, use JWT)
-            const { data: profiles } = await supabase
+            // Get authorization header
+            const authHeader = event.headers.authorization || event.headers.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'No authorization token' })
+                };
+            }
+            
+            const token = authHeader.substring(7);
+            
+            // Verify token and get user
+            const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+            
+            if (authError || !user) {
+                console.error('❌ Auth error:', authError?.message);
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Invalid token' })
+                };
+            }
+            
+            // Get user profile for username
+            const { data: profile } = await supabase
                 .from('profiles')
                 .select('display_name')
-                .limit(1);
+                .eq('id', user.id)
+                .single();
             
-            const username = profiles?.[0]?.display_name || 'Player';
+            const username = profile?.display_name || user.user_metadata?.full_name || 'Player';
             
             // Save to global scores
             const { error: globalError } = await supabase

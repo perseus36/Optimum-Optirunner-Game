@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auth Test - Optimum Runner</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #1a1a1a;
+            color: white;
+        }
+        .test-section {
+            background: #2a2a2a;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        button {
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45b7b8;
+        }
+        .log {
+            background: #1a1a1a;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success { background: #2d5a2d; }
+        .error { background: #5a2d2d; }
+        .info { background: #2d4a5a; }
+    </style>
+</head>
+<body>
+    <h1>🔐 Optimum Runner - Authentication Test</h1>
+    
+    <div class="test-section">
+        <h2>Authentication Status</h2>
+        <div id="authStatus" class="status info">Checking...</div>
+        <button onclick="checkAuthStatus()">Refresh Status</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Authentication Actions</h2>
+        <button onclick="signInWithGoogle()">Sign In with Google</button>
+        <button onclick="signOut()">Sign Out</button>
+        <button onclick="getCurrentUser()">Get Current User</button>
+        <button onclick="getUserProfile()">Get User Profile</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Leaderboard Test</h2>
+        <button onclick="getLeaderboard()">Get Global Leaderboard</button>
+        <button onclick="getWeeklyLeaderboard()">Get Weekly Leaderboard</button>
+        <button onclick="saveTestScore()">Save Test Score</button>
+    </div>
+    
+    <div class="test-section">
+        <h2>Log Output</h2>
+        <div id="logOutput" class="log"></div>
+        <button onclick="clearLog()">Clear Log</button>
+    </div>
+    
+    <!-- Supabase SDK -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="supabase-config.js"></script>
+    
+    <script>
+        let logOutput = document.getElementById('logOutput');
+        let authStatus = document.getElementById('authStatus');
+        
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            logOutput.textContent += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(message);
+        }
+        
+        function updateAuthStatus() {
+            const isSignedIn = window.authFunctions && window.authFunctions.isSignedIn();
+            authStatus.textContent = isSignedIn ? '✅ Signed In' : '❌ Not Signed In';
+            authStatus.className = `status ${isSignedIn ? 'success' : 'error'}`;
+        }
+        
+        async function checkAuthStatus() {
+            log('🔍 Checking authentication status...');
+            updateAuthStatus();
+            
+            if (window.authFunctions && window.authFunctions.isSignedIn()) {
+                log('✅ User is signed in');
+                const user = await window.authFunctions.getCurrentUser();
+                if (user) {
+                    log(`👤 User: ${user.display_name || user.email}`);
+                }
+            } else {
+                log('❌ User is not signed in');
+            }
+        }
+        
+        async function signInWithGoogle() {
+            log('🔐 Attempting Google sign in...');
+            try {
+                const result = await window.authFunctions.signInWithGoogle();
+                if (result.success) {
+                    log('✅ Google sign in initiated');
+                } else {
+                    log(`❌ Google sign in failed: ${result.error}`);
+                }
+            } catch (error) {
+                log(`❌ Google sign in error: ${error.message}`);
+            }
+        }
+        
+        async function signOut() {
+            log('🚪 Attempting sign out...');
+            try {
+                const result = await window.authFunctions.signOut();
+                if (result.success) {
+                    log('✅ Sign out successful');
+                    updateAuthStatus();
+                } else {
+                    log(`❌ Sign out failed: ${result.error}`);
+                }
+            } catch (error) {
+                log(`❌ Sign out error: ${error.message}`);
+            }
+        }
+        
+        async function getCurrentUser() {
+            log('👤 Getting current user...');
+            try {
+                const user = await window.authFunctions.getCurrentUser();
+                if (user) {
+                    log(`✅ Current user: ${JSON.stringify(user, null, 2)}`);
+                } else {
+                    log('❌ No current user');
+                }
+            } catch (error) {
+                log(`❌ Get current user error: ${error.message}`);
+            }
+        }
+        
+        async function getUserProfile() {
+            log('👤 Getting user profile...');
+            try {
+                const result = await window.authFunctions.getUserProfile();
+                if (result.success) {
+                    log(`✅ User profile: ${JSON.stringify(result.data, null, 2)}`);
+                } else {
+                    log(`❌ Get user profile failed: ${result.error}`);
+                }
+            } catch (error) {
+                log(`❌ Get user profile error: ${error.message}`);
+            }
+        }
+        
+        async function getLeaderboard() {
+            log('🏆 Getting global leaderboard...');
+            try {
+                const result = await window.authFunctions.getLeaderboard(false, 5);
+                if (result.success) {
+                    log(`✅ Global leaderboard: ${JSON.stringify(result.data, null, 2)}`);
+                } else {
+                    log(`❌ Get global leaderboard failed: ${result.error}`);
+                }
+            } catch (error) {
+                log(`❌ Get global leaderboard error: ${error.message}`);
+            }
+        }
+        
+        async function getWeeklyLeaderboard() {
+            log('🏆 Getting weekly leaderboard...');
+            try {
+                const result = await window.authFunctions.getLeaderboard(true, 5);
+                if (result.success) {
+                    log(`✅ Weekly leaderboard: ${JSON.stringify(result.data, null, 2)}`);
+                } else {
+                    log(`❌ Get weekly leaderboard failed: ${result.error}`);
+                }
+            } catch (error) {
+                log(`❌ Get weekly leaderboard error: ${error.message}`);
+            }
+        }
+        
+        async function saveTestScore() {
+            log('💾 Saving test score...');
+            try {
+                const result = await window.authFunctions.saveToLeaderboard(1000, 50, 30, 25);
+                if (result.success) {
+                    log('✅ Test score saved successfully');
+                } else {
+                    log(`❌ Save test score failed: ${result.error}`);
+                }
+            } catch (error) {
+                log(`❌ Save test score error: ${error.message}`);
+            }
+        }
+        
+        function clearLog() {
+            logOutput.textContent = '';
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            log('🚀 Authentication test page loaded');
+            setTimeout(() => {
+                checkAuthStatus();
+            }, 1000);
+        });
+        
+        // Listen for auth state changes
+        window.addEventListener('userSignedIn', () => {
+            log('✅ User signed in event received');
+            updateAuthStatus();
+        });
+        
+        window.addEventListener('userSignedOut', () => {
+            log('✅ User signed out event received');
+            updateAuthStatus();
+        });
+    </script>
+</body>
+</html>

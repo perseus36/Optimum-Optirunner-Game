@@ -4,9 +4,15 @@
   publish = "."
 
 [functions]
-  directory = "functions"
+  directory = "netlify/functions"
 
 # Disable secrets scanning for supabase-config.js
 [build.environment]
   SECRETS_SCAN_OMIT_PATHS = "supabase-config.js"
   NODE_VERSION = "18"
+
+# Redirect rules for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

@@ -21,12 +21,14 @@ function initSupabase() {
             auth: {
                 onAuthStateChange: (callback) => {
                     console.log('✅ Auth state listener set up');
-                    // For now, just call the callback with no user
-                    callback('SIGNED_OUT', null);
+                    // Check for existing auth state
+                    const isSignedIn = authFunctions.isSignedIn();
+                    callback(isSignedIn ? 'SIGNED_IN' : 'SIGNED_OUT', isSignedIn ? currentUser : null);
                 },
                 getUser: async () => {
                     console.log('🔍 Getting user via Netlify Functions...');
-                    return { data: { user: null }, error: null };
+                    const user = await authFunctions.getCurrentUser();
+                    return { data: { user }, error: null };
                 }
             }
         };
@@ -37,7 +39,7 @@ function initSupabase() {
 
         console.log('✅ Using Netlify Functions for Supabase operations');
         
-        // Set up auth state listener (simplified)
+        // Set up auth state listener
         window.addEventListener('userSignedIn', (event) => {
             console.log('✅ User signed in via Netlify Functions');
             currentUser = event.detail.user;
@@ -60,12 +62,8 @@ const authFunctions = {
     // Sign in with Google
     async signInWithGoogle() {
         try {
-            console.log('🔐 Attempting Google sign in via direct Supabase...');
+            console.log('🔐 Attempting Google sign in via Netlify Functions...');
             
-            // Use Netlify Functions for OAuth
-            console.log('🌐 Using Netlify Functions for Google OAuth...');
-            
-            // Use Netlify Functions for OAuth
             const response = await fetch('/.netlify/functions/supabase-proxy/auth/google', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -75,6 +73,10 @@ const authFunctions = {
             const result = await response.json();
             if (result.success) {
                 console.log('✅ Google OAuth URL generated via Netlify Functions');
+                // Redirect to Google OAuth
+                if (result.data && result.data.url) {
+                    window.location.href = result.data.url;
+                }
                 return { success: true, data: result.data };
             } else {
                 console.error('❌ Google sign in failed via Netlify Functions:', result.error);
@@ -91,6 +93,10 @@ const authFunctions = {
         try {
             console.log('🚪 Attempting sign out via Netlify Functions...');
             
+            // Clear local storage
+            localStorage.removeItem('supabase_access_token');
+            localStorage.removeItem('supabase_expires_at');
+            
             const response = await fetch('/.netlify/functions/supabase-proxy/auth/signout', {
                 method: 'POST',
                 headers: {
@@ -106,6 +112,10 @@ const authFunctions = {
             }
             
             console.log('✅ Sign out successful via Netlify Functions');
+            
+            // Dispatch sign out event
+            window.dispatchEvent(new CustomEvent('userSignedOut'));
+            
             return { success: true };
         } catch (error) {
             console.error('❌ Sign out error:', error);
@@ -189,7 +199,7 @@ const authFunctions = {
             const accessToken = localStorage.getItem('supabase_access_token');
             if (!accessToken) {
                 console.log('ℹ️ No access token found');
-                return null;
+                return { success: false, error: 'No access token' };
             }
             
             const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
@@ -204,15 +214,162 @@ const authFunctions = {
             
             if (!result.success) {
                 console.log('ℹ️ No user profile found');
-                return null;
+                return { success: false, error: result.error };
             }
             
             console.log('✅ User profile retrieved via Netlify Functions');
-            return result.data;
+            return { success: true, data: result.data };
         } catch (error) {
             console.error('❌ Get user profile error:', error);
-            return null;
+            return { success: false, error: error.message };
         }
+    },
+
+    // Create or update user profile
+    async createUserProfile(profileData = {}) {
+        try {
+            console.log('👤 Creating/updating user profile via Netlify Functions...');
+            
+            const accessToken = localStorage.getItem('supabase_access_token');
+            if (!accessToken) {
+                console.log('ℹ️ No access token found');
+                return { success: false, error: 'No access token' };
+            }
+            
+            const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify(profileData)
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.error('❌ Create profile failed:', result.error);
+                return { success: false, error: result.error };
+            }
+            
+            console.log('✅ Profile created/updated via Netlify Functions');
+            return { success: true, data: result.data };
+        } catch (error) {
+            console.error('❌ Create profile error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Update username
+    async updateUsername(newUsername) {
+        try {
+            console.log('👤 Updating username via Netlify Functions...');
+            
+            const accessToken = localStorage.getItem('supabase_access_token');
+            if (!accessToken) {
+                console.log('ℹ️ No access token found');
+                return { success: false, error: 'No access token' };
+            }
+            
+            const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                    display_name: newUsername,
+                    username_changed: true
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.error('❌ Update username failed:', result.error);
+                return { success: false, error: result.error };
+            }
+            
+            console.log('✅ Username updated via Netlify Functions');
+            return { success: true, data: result.data };
+        } catch (error) {
+            console.error('❌ Update username error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Get leaderboard data
+    async getLeaderboard(isWeekly = false, limit = 10) {
+        try {
+            console.log('🏆 Getting leaderboard via Netlify Functions...');
+            
+            const response = await fetch(`/.netlify/functions/supabase-proxy/leaderboard?isWeekly=${isWeekly}&limit=${limit}`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.error('❌ Get leaderboard failed:', result.error);
+                return { success: false, error: result.error };
+            }
+            
+            console.log('✅ Leaderboard retrieved via Netlify Functions');
+            return { success: true, data: result.data };
+        } catch (error) {
+            console.error('❌ Get leaderboard error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+    // Save score to leaderboard
+    async saveToLeaderboard(score, optiEarned, gameDuration = 0, jumpCount = 0) {
+        try {
+            console.log('💾 Saving score to leaderboard via Netlify Functions...');
+            
+            const accessToken = localStorage.getItem('supabase_access_token');
+            if (!accessToken) {
+                console.log('ℹ️ No access token found');
+                return { success: false, error: 'No access token' };
+            }
+            
+            const response = await fetch('/.netlify/functions/supabase-proxy/leaderboard', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({
+                    score: score,
+                    optiEarned: optiEarned,
+                    gameDuration: gameDuration,
+                    jumpCount: jumpCount
+                })
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.error('❌ Save to leaderboard failed:', result.error);
+                return { success: false, error: result.error };
+            }
+            
+            console.log('✅ Score saved to leaderboard via Netlify Functions');
+            return { success: true };
+        } catch (error) {
+            console.error('❌ Save to leaderboard error:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
+
+    // Check ban status (placeholder)
+    async checkBanStatus() {
+        // For now, always return not banned
+        return { success: true, isBanned: false };
     }
 };
 

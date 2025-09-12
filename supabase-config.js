@@ -28,6 +28,9 @@ function initSupabase() {
             }
         };
 
+        // Set window.supabase for compatibility
+        window.supabase = supabase;
+
         console.log('✅ Using Netlify Functions for Supabase operations');
         
         // Set up auth state listener (simplified)

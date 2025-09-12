@@ -214,6 +214,11 @@ function handleOAuthCallback() {
         
         if (accessToken && expiresAt) {
             console.log('✅ Storing OAuth tokens');
+            console.log('🔍 Token:', accessToken.substring(0, 20) + '...');
+            console.log('🔍 Expires At:', expiresAt);
+            console.log('🔍 Current Time:', Date.now());
+            console.log('🔍 Expires Time:', parseInt(expiresAt));
+            
             localStorage.setItem('supabase_access_token', accessToken);
             localStorage.setItem('supabase_expires_at', expiresAt);
             

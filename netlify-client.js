@@ -1,4 +1,4 @@
-// netlify-client.js - Netlify Functions Client
+// netlify-client.js - Simplified Netlify Functions Client
 const NETLIFY_BASE_URL = '/.netlify/functions/supabase-proxy';
 
 // Netlify Functions Authentication Functions
@@ -60,118 +60,42 @@ const netlifyAuthFunctions = {
         }
     },
     
-    // Get leaderboard data
-    async getLeaderboard(isWeekly = false, limit = 10) {
-        try {
-            console.log(`🏆 Fetching ${isWeekly ? 'weekly' : 'global'} leaderboard via Netlify Functions...`);
-            
-            const response = await fetch(`${NETLIFY_BASE_URL}/leaderboard?isWeekly=${isWeekly}&limit=${limit}`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                console.error('❌ Get leaderboard failed:', result.error);
-                return { success: false, error: result.error };
-            }
-            
-            console.log(`✅ Leaderboard loaded: ${result.data.length} entries`);
-            return { success: true, data: result.data };
-        } catch (error) {
-            console.error('❌ Get leaderboard error:', error);
-            return { success: false, error: error.message };
-        }
-    },
-    
-    // Save score to leaderboard
-    async saveToLeaderboard(score, optiEarned, gameDuration = 0, jumpCount = 0) {
-        try {
-            console.log(`💾 Saving score ${score} via Netlify Functions...`);
-            
-            const response = await fetch(`${NETLIFY_BASE_URL}/leaderboard`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    score: score,
-                    optiEarned: optiEarned,
-                    gameDuration: gameDuration,
-                    jumpCount: jumpCount
-                })
-            });
-            
-            const result = await response.json();
-            
-            if (!result.success) {
-                console.error('❌ Save to leaderboard failed:', result.error);
-                return { success: false, error: result.error };
-            }
-            
-            console.log('✅ Score saved successfully via Netlify Functions');
-            return { success: true };
-        } catch (error) {
-            console.error('❌ Save to leaderboard error:', error);
-            return { success: false, error: error.message };
-        }
-    },
-    
-    // Health check
-    async healthCheck() {
-        try {
-            console.log('🏥 Checking Netlify Functions health...');
-            
-            const response = await fetch(`${NETLIFY_BASE_URL}/health`, {
-                method: 'GET',
-                headers: {
-                    'Content-Type': 'application/json',
-                }
-            });
-            
-            const result = await response.json();
-            
-            if (result.status === 'OK') {
-                console.log('✅ Netlify Functions are healthy');
-                return { success: true, data: result };
-            } else {
-                console.error('❌ Netlify Functions health check failed');
-                return { success: false, error: 'Health check failed' };
-            }
-        } catch (error) {
-            console.error('❌ Health check error:', error);
-            return { success: false, error: error.message };
-        }
-    },
-    
-    // Check if user is signed in (simplified)
+    // Check if user is signed in
     isSignedIn() {
-        // Bu basit bir kontrol, gerçek implementasyon session/cookie tabanlı olmalı
-        return localStorage.getItem('supabase-auth-token') !== null;
+        console.log('🔍 Checking sign in status via Netlify Functions...');
+        // For now, return false - we'll implement proper auth checking later
+        return false;
     },
     
-    // Get current user (simplified)
-    getCurrentUser() {
-        // Bu da basit bir kontrol, gerçek implementasyon session'dan gelmeli
-        const userData = localStorage.getItem('supabase-user');
-        return userData ? JSON.parse(userData) : null;
+    // Get current user
+    async getCurrentUser() {
+        try {
+            console.log('👤 Getting current user via Netlify Functions...');
+            
+            const response = await fetch(`${NETLIFY_BASE_URL}/profile`, {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (!result.success) {
+                console.log('ℹ️ No user signed in');
+                return null;
+            }
+            
+            console.log('✅ Current user retrieved via Netlify Functions');
+            return result.data;
+        } catch (error) {
+            console.error('❌ Get current user error:', error);
+            return null;
+        }
     }
 };
 
-// Export for use in game
-if (typeof window !== 'undefined') {
-    window.netlifyAuthFunctions = netlifyAuthFunctions;
-    console.log('✅ Netlify auth functions loaded');
-    
-    // Test health check on load
-    netlifyAuthFunctions.healthCheck().then(result => {
-        if (result.success) {
-            console.log('🎉 Netlify Functions proxy is ready!');
-        } else {
-            console.warn('⚠️ Netlify Functions proxy may not be ready');
-        }
-    });
-}
+// Expose to global scope
+window.netlifyAuthFunctions = netlifyAuthFunctions;
+
+console.log('✅ Netlify Functions client loaded');

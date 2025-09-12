@@ -87,9 +87,6 @@ class Game {
         this.browserPerformanceMode = this.detectBrowserPerformance();
         console.log(`🌐 Browser performance mode: ${this.browserPerformanceMode}`);
         
-        // Apply browser-specific optimizations
-        this.applyBrowserOptimizations();
-        
                  // Giant obstacle system - every 10 obstacles, one random obstacle becomes giant
          this.obstacleCount = 0; // Count of obstacles spawned
          this.giantObstacleDistance = 200; // Distance in frames when giant obstacle appears
@@ -147,6 +144,9 @@ class Game {
              { sprite: this.cloudSprite2, x: 150 + 480 + 100, y: 60, width: 400, height: 280, speed: 1.5 },
              { sprite: this.cloudSprite3, x: 150 + 480 + 100 + 400 + 100, y: 120, width: 360, height: 240, speed: 1.5 }
          ];
+         
+         // Apply browser-specific optimizations after clouds are initialized
+         this.applyBrowserOptimizations();
         
         // Cloud spacing system
         this.cloudSpacing = [100, 100]; // Initial spacing between clouds

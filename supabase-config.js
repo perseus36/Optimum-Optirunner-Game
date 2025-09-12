@@ -17,7 +17,7 @@ function initSupabase() {
         }
 
         // For local testing, use real Supabase SDK
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000') {
             console.log('🏠 Local testing - using real Supabase SDK');
             supabase = window.supabase.createClient(
                 'https://ulkhcojuizhqwhoyxhef.supabase.co',
@@ -103,7 +103,7 @@ const authFunctions = {
             console.log('🔐 Attempting Google sign in via direct Supabase...');
             
             // For local testing, use the existing real Supabase client
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000') {
                 console.log('🏠 Local testing - using existing real Supabase client');
                 
                 if (typeof window.supabase === 'undefined') {

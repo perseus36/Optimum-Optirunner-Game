@@ -496,6 +496,10 @@ class Game {
                     const result = await window.authFunctions.signInWithGoogle();
                     if (!result.success) {
                         alert('Sign in failed: ' + result.error);
+                    } else if (result.data && result.data.url) {
+                        // Redirect to Google OAuth URL
+                        console.log('🔄 Redirecting to Google OAuth...');
+                        window.location.href = result.data.url;
                     }
                 } catch (error) {
                     console.error('Google sign in error:', error);

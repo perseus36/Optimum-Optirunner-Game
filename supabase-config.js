@@ -16,16 +16,8 @@ function initSupabase() {
             return false;
         }
 
-        // For local testing, use real Supabase SDK
-        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000') {
-            console.log('🏠 Local testing - using real Supabase SDK');
-            supabase = window.supabase.createClient(
-                'https://ulkhcojuizhqwhoyxhef.supabase.co',
-                'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InVsa2hjb2p1aXpocXdob3l4aGVmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTc2MjQ3OTUsImV4cCI6MjA3MzIwMDc5NX0.3yUNb1_RRVpHPiXYiewEraQrFfcE0SAfoYCE7-Zuq84'
-            );
-        } else {
-            // Create a dummy Supabase client for production (Netlify Functions)
-            supabase = {
+        // Create a dummy Supabase client for production (Netlify Functions)
+        supabase = {
             auth: {
                 onAuthStateChange: (callback) => {
                     console.log('✅ Auth state listener set up');
@@ -36,40 +28,8 @@ function initSupabase() {
                     console.log('🔍 Getting user via Netlify Functions...');
                     return { data: { user: null }, error: null };
                 }
-            },
-            // Add createClient method for Google OAuth
-            createClient: (url, key) => {
-                console.log('🔧 Creating temporary Supabase client for OAuth...');
-                return {
-                    auth: {
-                        signInWithOAuth: async (options) => {
-                            console.log('🔐 OAuth request via Netlify Functions...');
-                            // For local testing, use direct Supabase client
-                            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                                console.log('🏠 Local testing - using direct Supabase client');
-                                // Use the real Supabase SDK for local testing
-                                const realSupabase = window.supabase.createClient(url, key);
-                                return await realSupabase.auth.signInWithOAuth(options);
-                            }
-                            
-                            // Use Netlify Functions for production
-                            const response = await fetch('/.netlify/functions/supabase-proxy/auth/google', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ redirectTo: window.location.origin })
-                            });
-                            const result = await response.json();
-                            if (result.success) {
-                                return { data: result.data, error: null };
-                            } else {
-                                return { data: null, error: { message: result.error } };
-                            }
-                        }
-                    }
-                };
             }
         };
-        }
 
         // Set window.supabase for compatibility
         window.supabase = supabase;
@@ -102,35 +62,8 @@ const authFunctions = {
         try {
             console.log('🔐 Attempting Google sign in via direct Supabase...');
             
-            // For local testing, use the existing real Supabase client
-            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || window.location.port === '8000') {
-                console.log('🏠 Local testing - using existing real Supabase client');
-                
-                if (typeof window.supabase === 'undefined') {
-                    console.error('❌ Supabase client not available');
-                    return { success: false, error: 'Supabase client not available' };
-                }
-                
-                console.log('✅ Using existing Supabase client for OAuth...');
-                
-                const { data, error } = await window.supabase.auth.signInWithOAuth({
-                    provider: 'google',
-                    options: {
-                        redirectTo: window.location.origin
-                    }
-                });
-                
-                if (error) {
-                    console.error('❌ Google sign in failed:', error);
-                    return { success: false, error: error.message };
-                }
-                
-                console.log('✅ Google sign in successful, redirecting...');
-                return { success: true, data };
-            }
-            
-            // For production, use Netlify Functions
-            console.log('🌐 Production - using Netlify Functions...');
+            // Use Netlify Functions for OAuth
+            console.log('🌐 Using Netlify Functions for Google OAuth...');
             
             // Use Netlify Functions for OAuth
             const response = await fetch('/.netlify/functions/supabase-proxy/auth/google', {
@@ -197,8 +130,11 @@ const authFunctions = {
         const now = Date.now();
         const expiresAtTime = parseInt(expiresAt);
         
-        if (now >= expiresAtTime) {
-            console.log('❌ Token expired, clearing storage');
+        // Add 5 minute buffer for token expiry
+        const bufferTime = 5 * 60 * 1000; // 5 minutes in milliseconds
+        
+        if (now >= (expiresAtTime - bufferTime)) {
+            console.log('❌ Token expired or expiring soon, clearing storage');
             localStorage.removeItem('supabase_access_token');
             localStorage.removeItem('supabase_expires_at');
             return false;

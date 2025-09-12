@@ -188,68 +188,13 @@ class Game {
         // Initialize authentication UI
         this.updateAuthUI();
         
-        // Show maintenance popup first
-        this.showMaintenancePopup();
+        // Maintenance popup removed
         
         // Game loop
         this.gameLoop();
     }
     
-    // Show maintenance popup
-    showMaintenancePopup() {
-        const popup = document.createElement('div');
-        popup.id = 'maintenancePopup';
-        popup.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            z-index: 10000;
-            font-family: 'Arial', sans-serif;
-        `;
-        
-        popup.innerHTML = `
-            <div style="
-                background: #1a1a1a;
-                border: 2px solid #ff6b35;
-                border-radius: 15px;
-                padding: 30px;
-                max-width: 500px;
-                text-align: center;
-                color: white;
-                box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
-            ">
-                <h2 style="color: #ff6b35; margin-bottom: 20px;">🔧 System Under Maintenance</h2>
-                <p style="margin-bottom: 20px; line-height: 1.5;">
-                    We're currently updating our authentication system to provide you with a better gaming experience. 
-                    Please check back in a few minutes.
-                </p>
-                <p style="margin-bottom: 30px; color: #ccc; font-size: 14px;">
-                    Thank you for your patience! 🎮
-                </p>
-                <div style="
-                    background: #ff6b35;
-                    color: white;
-                    padding: 12px 24px;
-                    border-radius: 8px;
-                    font-size: 16px;
-                    font-weight: bold;
-                    display: inline-block;
-                ">
-                    🔧 System Under Maintenance
-                </div>
-            </div>
-        `;
-        
-        document.body.appendChild(popup);
-        
-        // Popup cannot be closed - maintenance mode is active
-    }
+    // Maintenance popup removed
     generateNewCloudSpacing() {
         this.cloudSpacing[0] = Math.floor(Math.random() * (400 - 100 + 1)) + 100; // Random between 100-400
         this.cloudSpacing[1] = Math.floor(Math.random() * (400 - 100 + 1)) + 100; // Random between 100-400
@@ -3152,16 +3097,7 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log('Supabase ready:', window.supabaseReady);
     console.log('AuthFunctions available:', !!window.authFunctions);
     
-    // Check if maintenance mode is active
-    const maintenanceOverlay = document.getElementById('maintenanceOverlay');
-    if (maintenanceOverlay) {
-        // Hide the game container when maintenance mode is active
-        const gameContainer = document.querySelector('.game-container');
-        if (gameContainer) {
-            gameContainer.style.display = 'none';
-        }
-        return; // Don't initialize the game
-    }
+    // Maintenance mode removed - game can start normally
     
     // Wait for Supabase to be ready
     if (window.supabaseReady) {

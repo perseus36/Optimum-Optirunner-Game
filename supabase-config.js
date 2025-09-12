@@ -13,7 +13,21 @@ function initSupabase() {
             return false;
         }
 
-        // For now, we'll use Netlify Functions instead of direct Supabase
+        // Create a dummy Supabase client for compatibility
+        supabase = {
+            auth: {
+                onAuthStateChange: (callback) => {
+                    console.log('✅ Auth state listener set up');
+                    // For now, just call the callback with no user
+                    callback('SIGNED_OUT', null);
+                },
+                getUser: async () => {
+                    console.log('🔍 Getting user via Netlify Functions...');
+                    return { data: { user: null }, error: null };
+                }
+            }
+        };
+
         console.log('✅ Using Netlify Functions for Supabase operations');
         
         // Set up auth state listener (simplified)

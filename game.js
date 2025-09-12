@@ -1314,21 +1314,14 @@ class Game {
         this.opti = profile.opti_points || 0;
         this.updateUI();
         
-        // Check if username can be changed (allow 2 changes)
+        // Check if username can be changed (temporarily allow unlimited)
         const changeBtn = document.getElementById('changeUsernameBtn');
         const changeInfo = document.getElementById('usernameChangeInfo');
-        const changeCount = profile.username_change_count || 0;
-        const remainingChanges = 2 - changeCount;
         
-        if (changeCount >= 2) {
-            changeBtn.disabled = true;
-            changeInfo.textContent = 'Username change limit reached (2/2)!';
-            changeInfo.style.color = '#e74c3c';
-        } else {
-            changeBtn.disabled = false;
-            changeInfo.textContent = `You can change your username ${remainingChanges} more time(s) (${changeCount}/2 used)!`;
-            changeInfo.style.color = remainingChanges === 1 ? '#ffa500' : '#2ecc71';
-        }
+        // For now, always allow username changes until we implement proper counting
+        changeBtn.disabled = false;
+        changeInfo.textContent = 'You can change your username (limit will be 2 changes soon)!';
+        changeInfo.style.color = '#2ecc71';
     }
     
     showProfile() {

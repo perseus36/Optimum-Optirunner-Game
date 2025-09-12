@@ -210,38 +210,12 @@ exports.handler = async (event, context) => {
             }
             
             // Check if user already changed username (allow 2 changes)
-            // Try to fetch with username_change_count first, fallback to legacy method
-            let existingProfile, fetchError, changeCount = 0;
-            
-            try {
-                const result = await supabase
-                    .from('profiles')
-                    .select('username_changed, display_name, username_change_count')
-                    .eq('user_id', user.id)
-                    .single();
-                
-                existingProfile = result.data;
-                fetchError = result.error;
-                
-                if (existingProfile && existingProfile.username_change_count !== undefined) {
-                    changeCount = existingProfile.username_change_count;
-                } else {
-                    // Fallback to legacy method
-                    changeCount = existingProfile?.username_changed ? 1 : 0;
-                }
-            } catch (error) {
-                console.log('⚠️ Using legacy username change detection');
-                // Fallback to legacy method
-                const legacyResult = await supabase
-                    .from('profiles')
-                    .select('username_changed, display_name')
-                    .eq('user_id', user.id)
-                    .single();
-                
-                existingProfile = legacyResult.data;
-                fetchError = legacyResult.error;
-                changeCount = existingProfile?.username_changed ? 1 : 0;
-            }
+            // Use simple approach - only check basic fields first
+            const { data: existingProfile, error: fetchError } = await supabase
+                .from('profiles')
+                .select('username_changed, display_name')
+                .eq('user_id', user.id)
+                .single();
             
             if (fetchError) {
                 console.error('❌ Error fetching profile for username change:', fetchError);
@@ -252,29 +226,27 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            if (changeCount >= 2) {
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ success: false, error: 'Username can only be changed 2 times' })
-                };
-            }
+            // For now, use simple logic: if username_changed is true, user has used 1 change
+            // We'll implement proper counting after database is updated
+            const changeCount = existingProfile?.username_changed ? 1 : 0;
             
-            // Update username in profile
+            // Temporarily allow unlimited changes until we implement proper counting
+            // if (changeCount >= 2) {
+            //     return {
+            //         statusCode: 400,
+            //         headers,
+            //         body: JSON.stringify({ success: false, error: 'Username can only be changed 2 times' })
+            //     };
+            // }
+            
+            // Update username in profile (simple approach for now)
             const updateData = {
                 display_name: data.display_name,
                 username_changed: true
             };
             
-            // Only add username_change_count if we successfully got it from the profile
-            if (existingProfile && existingProfile.username_change_count !== undefined) {
-                updateData.username_change_count = changeCount + 1;
-                console.log('✅ Using new username_change_count system');
-            } else {
-                console.log('⚠️ Using legacy username_changed system');
-            }
-            
             console.log('🔄 Updating profile with data:', updateData);
+            console.log('👤 Current change count:', changeCount);
             
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')

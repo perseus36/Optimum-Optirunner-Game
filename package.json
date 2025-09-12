@@ -1,0 +1,24 @@
+{
+  "name": "optimum-runner-netlify",
+  "version": "1.0.0",
+  "description": "Optimum Runner game with Netlify Functions",
+  "main": "index.html",
+  "scripts": {
+    "build": "echo 'No build step needed'",
+    "dev": "netlify dev",
+    "deploy": "netlify deploy --prod",
+    "test": "echo 'Testing Netlify Functions...' && curl http://localhost:8888/.netlify/functions/supabase-proxy/health"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.38.4"
+  },
+  "devDependencies": {
+    "netlify-cli": "^15.0.0"
+  },
+  "keywords": ["game", "netlify", "supabase", "functions"],
+  "author": "Optimum Runner Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

@@ -1,0 +1,35 @@
+# netlify.toml - Netlify Configuration
+[build]
+  command = "echo 'No build needed'"
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+# API redirects
+[[redirects]]
+  from = "/api/*"
+  to = "/.netlify/functions/supabase-proxy"
+  status = 200
+
+# Health check redirect
+[[redirects]]
+  from = "/health"
+  to = "/.netlify/functions/supabase-proxy/health"
+  status = 200
+
+[build.environment]
+  NODE_VERSION = "18"
+
+# Environment variables (set these in Netlify dashboard)
+# SUPABASE_URL = "https://ulkhcojuizhqwhoyxhef.supabase.co"
+# SUPABASE_ANON_KEY = "your_anon_key_here"
+
+# Security headers
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Frame-Options = "DENY"
+    X-XSS-Protection = "1; mode=block"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

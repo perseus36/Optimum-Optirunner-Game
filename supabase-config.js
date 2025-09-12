@@ -152,10 +152,17 @@ const authFunctions = {
         try {
             console.log('👤 Getting current user via Netlify Functions...');
             
+            const accessToken = localStorage.getItem('supabase_access_token');
+            if (!accessToken) {
+                console.log('ℹ️ No access token found');
+                return null;
+            }
+            
             const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
                 }
             });
             
@@ -179,10 +186,17 @@ const authFunctions = {
         try {
             console.log('👤 Getting user profile via Netlify Functions...');
             
+            const accessToken = localStorage.getItem('supabase_access_token');
+            if (!accessToken) {
+                console.log('ℹ️ No access token found');
+                return null;
+            }
+            
             const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
                 method: 'GET',
                 headers: {
                     'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${accessToken}`
                 }
             });
             

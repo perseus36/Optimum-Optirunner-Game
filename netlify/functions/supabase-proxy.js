@@ -368,8 +368,15 @@ exports.handler = async (event, context) => {
 
         if (path.includes('/leaderboard') && httpMethod === 'POST') {
             console.log('💾 Processing save score request');
+            console.log('📊 Received data:', data);
             
             const { score, optiEarned, gameDuration, jumpCount } = data;
+            
+            console.log('📊 Parsed values:');
+            console.log('- score:', score, typeof score);
+            console.log('- optiEarned:', optiEarned, typeof optiEarned);
+            console.log('- gameDuration:', gameDuration, typeof gameDuration);
+            console.log('- jumpCount:', jumpCount, typeof jumpCount);
             
             // Basic validation
             if (typeof score !== 'number' || score < 0 || score > 1000000) {
@@ -420,16 +427,20 @@ exports.handler = async (event, context) => {
             console.log('Username:', username);
             console.log('Score:', score);
             
+            const scoreData = {
+                user_id: user.id,
+                username: username,
+                score: score,
+                opti_earned: optiEarned || 0,
+                game_duration: gameDuration || 0,
+                jump_count: jumpCount || 0
+            };
+            
+            console.log('📊 Score data to insert:', scoreData);
+            
             const { data: globalResult, error: globalError } = await supabase
                 .from('scores')
-                .upsert({
-                    user_id: user.id,
-                    username: username,
-                    score: score,
-                    opti_earned: optiEarned || 0,
-                    game_duration: gameDuration || 0,
-                    jump_count: jumpCount || 0
-                })
+                .upsert(scoreData)
                 .select();
             
             if (globalError) {
@@ -452,17 +463,21 @@ exports.handler = async (event, context) => {
             console.log('🔄 Saving to weekly scores table...');
             console.log('Week start:', weekStart.toISOString());
             
+            const weeklyScoreData = {
+                user_id: user.id,
+                username: username,
+                score: score,
+                opti_earned: optiEarned || 0,
+                week_start: weekStart.toISOString(),
+                game_duration: gameDuration || 0,
+                jump_count: jumpCount || 0
+            };
+            
+            console.log('📊 Weekly score data to insert:', weeklyScoreData);
+            
             const { data: weeklyResult, error: weeklyError } = await supabase
                 .from('weekly_scores')
-                .upsert({
-                    user_id: user.id,
-                    username: username,
-                    score: score,
-                    opti_earned: optiEarned || 0,
-                    week_start: weekStart.toISOString(),
-                    game_duration: gameDuration || 0,
-                    jump_count: jumpCount || 0
-                })
+                .upsert(weeklyScoreData)
                 .select();
             
             if (weeklyError) {

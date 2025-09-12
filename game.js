@@ -2007,6 +2007,12 @@ class Game {
                 
                 // Save to leaderboards
                 console.log('🔄 Saving to leaderboards...');
+                console.log('📊 Score data being sent:');
+                console.log('- Score:', this.score);
+                console.log('- OPTI Earned:', optiEarned);
+                console.log('- Game Duration:', this.totalGameTime);
+                console.log('- Jump Count:', this.jumpCount);
+                
                 const leaderboardResult = await window.authFunctions.saveToLeaderboard(
                     this.score, 
                     optiEarned, 

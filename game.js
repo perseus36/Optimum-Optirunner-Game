@@ -145,8 +145,7 @@ class Game {
              { sprite: this.cloudSprite3, x: 150 + 480 + 100 + 400 + 100, y: 120, width: 360, height: 240, speed: 1.5 }
          ];
          
-         // Apply browser-specific optimizations after clouds are initialized
-         this.applyBrowserOptimizations();
+         // Browser optimizations removed - using default settings
         
         // Cloud spacing system
         this.cloudSpacing = [100, 100]; // Initial spacing between clouds
@@ -1285,10 +1284,26 @@ class Game {
                     this.updateProfileDisplay(createResult.data);
                 } else {
                     console.error('❌ Failed to create profile:', createResult.error);
+                    // Even if profile creation fails, allow username changes
+                    this.updateProfileDisplay({
+                        display_name: 'Player',
+                        highest_score: 0,
+                        opti_points: 0,
+                        games_played: 0,
+                        username_changed: false
+                    });
                 }
             }
         } catch (error) {
             console.error('Error loading user profile:', error);
+            // Even if there's an error, allow username changes
+            this.updateProfileDisplay({
+                display_name: 'Player',
+                highest_score: 0,
+                opti_points: 0,
+                games_played: 0,
+                username_changed: false
+            });
         }
     }
     
@@ -3138,81 +3153,11 @@ class Game {
         return performanceMode;
     }
     
-    applyBrowserOptimizations() {
-        if (this.browserPerformanceMode === 'low' || this.browserPerformanceMode === 'brave') {
-            console.log('🛠️ Applying Brave/Low performance optimizations...');
-            
-            // Reduce obstacle spawn rate for better performance
-            this.obstacleSpawnRate = Math.floor(this.obstacleSpawnRate * 1.2); // 20% slower spawn
-            this.baseObstacleSpawnRate = this.obstacleSpawnRate;
-            
-            // Reduce animation speed
-            this.animationSpeed = Math.floor(this.animationSpeed * 1.5); // Slower sprite animation
-            
-            // Reduce bonus spawn rate
-            this.bonusSpawnRate = Math.floor(this.bonusSpawnRate * 1.3); // 30% slower bonus spawn
-            
-            // Reduce cloud animation speed
-            this.clouds.forEach(cloud => {
-                cloud.speed *= 0.7; // 30% slower cloud movement
-            });
-            
-            console.log('✅ Brave optimizations applied');
-            console.log(`- Obstacle spawn rate: ${this.obstacleSpawnRate} frames`);
-            console.log(`- Animation speed: ${this.animationSpeed} frames`);
-            console.log(`- Bonus spawn rate: ${this.bonusSpawnRate} frames`);
-        }
-    }
+    // Browser optimizations removed - using default game settings
     
     gameLoop() {
-        // Performance monitoring
-        const startTime = performance.now();
-        
-        // Frame rate throttling based on browser
-        const targetFPS = this.browserPerformanceMode === 'low' || this.browserPerformanceMode === 'brave' ? 45 : 60;
-        const targetFrameTime = 1000 / targetFPS; // ms per frame
-        
-        // Skip frames if we're running too fast (especially for Chrome)
-        if (!this.lastFrameTime) {
-            this.lastFrameTime = startTime;
-            this.fpsCounter = 0;
-            this.frameSkipCounter = 0;
-        }
-        
-        const timeSinceLastFrame = startTime - this.lastFrameTime;
-        
-        // Only update if enough time has passed (throttle to target FPS)
-        if (timeSinceLastFrame >= targetFrameTime) {
-            this.update();
-            this.draw();
-            
-            // Update frame tracking
-            this.lastFrameTime = startTime;
-            this.frameSkipCounter = 0;
-        } else {
-            this.frameSkipCounter++;
-            // Still draw to maintain smooth visuals, but don't update game logic
-            this.draw();
-        }
-        
-        // Log performance differences between browsers
-        const endTime = performance.now();
-        const frameTime = endTime - startTime;
-        
-        this.fpsCounter++;
-        const timeSinceLastLog = startTime - this.lastFrameTime;
-        
-        // Log every second with real FPS
-        if (timeSinceLastLog >= 1000) {
-            const actualFPS = Math.round((this.fpsCounter * 1000) / timeSinceLastLog);
-            console.log(`🎮 Real FPS: ${actualFPS} | Target: ${targetFPS} | ${this.browserPerformanceMode} | Skips: ${this.frameSkipCounter}`);
-            
-            // Reset counters
-            this.lastFrameTime = startTime;
-            this.fpsCounter = 0;
-            this.frameSkipCounter = 0;
-        }
-        
+        this.update();
+        this.draw();
         requestAnimationFrame(() => this.gameLoop());
     }
 }

@@ -150,7 +150,7 @@ exports.handler = async (event, context) => {
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('id', user.id)
+                .eq('user_id', user.id)
                 .single();
             
             if (profileError && profileError.code !== 'PGRST116') {
@@ -212,7 +212,7 @@ exports.handler = async (event, context) => {
             const { data: existingProfile } = await supabase
                 .from('profiles')
                 .select('username_changed')
-                .eq('id', user.id)
+                .eq('user_id', user.id)
                 .single();
             
             if (existingProfile?.username_changed) {
@@ -230,7 +230,7 @@ exports.handler = async (event, context) => {
                     display_name: data.display_name,
                     username_changed: true
                 })
-                .eq('id', user.id)
+                .eq('user_id', user.id)
                 .select()
                 .single();
             
@@ -282,12 +282,12 @@ exports.handler = async (event, context) => {
             const { data: existingProfile } = await supabase
                 .from('profiles')
                 .select('*')
-                .eq('id', user.id)
+                .eq('user_id', user.id)
                 .single();
             
             // Create or update profile with proper merge logic
             let profileData = {
-                id: user.id,
+                user_id: user.id,
                 email: user.email,
                 avatar_url: user.user_metadata?.avatar_url || existingProfile?.avatar_url || ''
             };
@@ -396,7 +396,7 @@ exports.handler = async (event, context) => {
             const { data: profile } = await supabase
                 .from('profiles')
                 .select('display_name')
-                .eq('id', user.id)
+                .eq('user_id', user.id)
                 .single();
             
             const username = profile?.display_name || user.user_metadata?.full_name || 'Player';
@@ -405,6 +405,7 @@ exports.handler = async (event, context) => {
             const { error: globalError } = await supabase
                 .from('scores')
                 .upsert({
+                    user_id: user.id,
                     username: username,
                     score: score,
                     opti_earned: optiEarned || 0,
@@ -429,6 +430,7 @@ exports.handler = async (event, context) => {
             const { error: weeklyError } = await supabase
                 .from('weekly_scores')
                 .upsert({
+                    user_id: user.id,
                     username: username,
                     score: score,
                     opti_earned: optiEarned || 0,

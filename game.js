@@ -224,7 +224,7 @@ class Game {
                 color: white;
                 box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
             ">
-                <h2 style="color: #ff6b35; margin-bottom: 20px;">🔧 Maintenance Mode</h2>
+                <h2 style="color: #ff6b35; margin-bottom: 20px;">🔧 System Under Maintenance</h2>
                 <p style="margin-bottom: 20px; line-height: 1.5;">
                     We're currently updating our authentication system to provide you with a better gaming experience. 
                     Please check back in a few minutes.
@@ -232,35 +232,23 @@ class Game {
                 <p style="margin-bottom: 30px; color: #ccc; font-size: 14px;">
                     Thank you for your patience! 🎮
                 </p>
-                <button id="maintenanceClose" style="
+                <div style="
                     background: #ff6b35;
                     color: white;
-                    border: none;
                     padding: 12px 24px;
                     border-radius: 8px;
-                    cursor: pointer;
                     font-size: 16px;
                     font-weight: bold;
-                    transition: background 0.3s;
-                " onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='#ff6b35'">
-                    I Understand
-                </button>
+                    display: inline-block;
+                ">
+                    🔧 System Under Maintenance
+                </div>
             </div>
         `;
         
         document.body.appendChild(popup);
         
-        // Close popup when button is clicked
-        document.getElementById('maintenanceClose').addEventListener('click', () => {
-            popup.remove();
-        });
-        
-        // Auto close after 10 seconds
-        setTimeout(() => {
-            if (document.getElementById('maintenancePopup')) {
-                popup.remove();
-            }
-        }, 10000);
+        // Popup cannot be closed - maintenance mode is active
     }
     generateNewCloudSpacing() {
         this.cloudSpacing[0] = Math.floor(Math.random() * (400 - 100 + 1)) + 100; // Random between 100-400

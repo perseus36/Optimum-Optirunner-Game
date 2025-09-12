@@ -188,11 +188,80 @@ class Game {
         // Initialize authentication UI
         this.updateAuthUI();
         
+        // Show maintenance popup first
+        this.showMaintenancePopup();
+        
         // Game loop
         this.gameLoop();
     }
     
-    // Method to generate random cloud spacing between 100-400 pixels
+    // Show maintenance popup
+    showMaintenancePopup() {
+        const popup = document.createElement('div');
+        popup.id = 'maintenancePopup';
+        popup.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            font-family: 'Arial', sans-serif;
+        `;
+        
+        popup.innerHTML = `
+            <div style="
+                background: #1a1a1a;
+                border: 2px solid #ff6b35;
+                border-radius: 15px;
+                padding: 30px;
+                max-width: 500px;
+                text-align: center;
+                color: white;
+                box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
+            ">
+                <h2 style="color: #ff6b35; margin-bottom: 20px;">🔧 Maintenance Mode</h2>
+                <p style="margin-bottom: 20px; line-height: 1.5;">
+                    We're currently updating our authentication system to provide you with a better gaming experience. 
+                    Please check back in a few minutes.
+                </p>
+                <p style="margin-bottom: 30px; color: #ccc; font-size: 14px;">
+                    Thank you for your patience! 🎮
+                </p>
+                <button id="maintenanceClose" style="
+                    background: #ff6b35;
+                    color: white;
+                    border: none;
+                    padding: 12px 24px;
+                    border-radius: 8px;
+                    cursor: pointer;
+                    font-size: 16px;
+                    font-weight: bold;
+                    transition: background 0.3s;
+                " onmouseover="this.style.background='#e55a2b'" onmouseout="this.style.background='#ff6b35'">
+                    I Understand
+                </button>
+            </div>
+        `;
+        
+        document.body.appendChild(popup);
+        
+        // Close popup when button is clicked
+        document.getElementById('maintenanceClose').addEventListener('click', () => {
+            popup.remove();
+        });
+        
+        // Auto close after 10 seconds
+        setTimeout(() => {
+            if (document.getElementById('maintenancePopup')) {
+                popup.remove();
+            }
+        }, 10000);
+    }
     generateNewCloudSpacing() {
         this.cloudSpacing[0] = Math.floor(Math.random() * (400 - 100 + 1)) + 100; // Random between 100-400
         this.cloudSpacing[1] = Math.floor(Math.random() * (400 - 100 + 1)) + 100; // Random between 100-400

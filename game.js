@@ -87,6 +87,9 @@ class Game {
         this.browserPerformanceMode = this.detectBrowserPerformance();
         console.log(`🌐 Browser performance mode: ${this.browserPerformanceMode}`);
         
+        // Apply browser-specific optimizations
+        this.applyBrowserOptimizations();
+        
                  // Giant obstacle system - every 10 obstacles, one random obstacle becomes giant
          this.obstacleCount = 0; // Count of obstacles spawned
          this.giantObstacleDistance = 200; // Distance in frames when giant obstacle appears
@@ -3137,6 +3140,32 @@ class Game {
         return performanceMode;
     }
     
+    applyBrowserOptimizations() {
+        if (this.browserPerformanceMode === 'low' || this.browserPerformanceMode === 'brave') {
+            console.log('🛠️ Applying Brave/Low performance optimizations...');
+            
+            // Reduce obstacle spawn rate for better performance
+            this.obstacleSpawnRate = Math.floor(this.obstacleSpawnRate * 1.2); // 20% slower spawn
+            this.baseObstacleSpawnRate = this.obstacleSpawnRate;
+            
+            // Reduce animation speed
+            this.animationSpeed = Math.floor(this.animationSpeed * 1.5); // Slower sprite animation
+            
+            // Reduce bonus spawn rate
+            this.bonusSpawnRate = Math.floor(this.bonusSpawnRate * 1.3); // 30% slower bonus spawn
+            
+            // Reduce cloud animation speed
+            this.clouds.forEach(cloud => {
+                cloud.speed *= 0.7; // 30% slower cloud movement
+            });
+            
+            console.log('✅ Brave optimizations applied');
+            console.log(`- Obstacle spawn rate: ${this.obstacleSpawnRate} frames`);
+            console.log(`- Animation speed: ${this.animationSpeed} frames`);
+            console.log(`- Bonus spawn rate: ${this.bonusSpawnRate} frames`);
+        }
+    }
+    
     gameLoop() {
         // Performance monitoring
         const startTime = performance.now();
@@ -3148,9 +3177,23 @@ class Game {
         const endTime = performance.now();
         const frameTime = endTime - startTime;
         
-        // Only log every 60 frames to avoid spam
-        if (this.frameCount % 60 === 0) {
-            console.log(`Frame ${this.frameCount}: ${frameTime.toFixed(2)}ms (${this.browserPerformanceMode})`);
+        // Real-time FPS calculation
+        if (!this.lastFrameTime) {
+            this.lastFrameTime = startTime;
+            this.fpsCounter = 0;
+        }
+        
+        this.fpsCounter++;
+        const timeSinceLastLog = startTime - this.lastFrameTime;
+        
+        // Log every second with real FPS
+        if (timeSinceLastLog >= 1000) {
+            const actualFPS = Math.round((this.fpsCounter * 1000) / timeSinceLastLog);
+            console.log(`🎮 Real FPS: ${actualFPS} | Frame ${this.frameCount} | ${this.browserPerformanceMode} | ${frameTime.toFixed(2)}ms`);
+            
+            // Reset counters
+            this.lastFrameTime = startTime;
+            this.fpsCounter = 0;
         }
         
         // Throttle game loop for better performance on slower browsers

@@ -83,6 +83,10 @@ class Game {
         this.gameStartFrame = 0; // Frame when game started
         this.speedIncreaseStarted = false; // Whether speed increase has started
         
+        // Browser performance detection
+        this.browserPerformanceMode = this.detectBrowserPerformance();
+        console.log(`🌐 Browser performance mode: ${this.browserPerformanceMode}`);
+        
                  // Giant obstacle system - every 10 obstacles, one random obstacle becomes giant
          this.obstacleCount = 0; // Count of obstacles spawned
          this.giantObstacleDistance = 200; // Distance in frames when giant obstacle appears
@@ -3105,9 +3109,55 @@ class Game {
     
 
     
+    detectBrowserPerformance() {
+        // Detect browser and performance characteristics
+        const userAgent = navigator.userAgent.toLowerCase();
+        let performanceMode = 'normal';
+        
+        // Brave browser detection
+        if (userAgent.includes('brave')) {
+            performanceMode = 'brave';
+            console.log('🦁 Brave browser detected - applying optimizations');
+        }
+        
+        // Check for hardware acceleration
+        const canvas = document.createElement('canvas');
+        const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+        if (!gl) {
+            performanceMode = 'low';
+            console.log('⚠️ WebGL not available - using low performance mode');
+        }
+        
+        // Check device memory (if available)
+        if (navigator.deviceMemory && navigator.deviceMemory < 4) {
+            performanceMode = 'low';
+            console.log(`📱 Low device memory detected: ${navigator.deviceMemory}GB`);
+        }
+        
+        return performanceMode;
+    }
+    
     gameLoop() {
+        // Performance monitoring
+        const startTime = performance.now();
+        
         this.update();
         this.draw();
+        
+        // Log performance differences between browsers
+        const endTime = performance.now();
+        const frameTime = endTime - startTime;
+        
+        // Only log every 60 frames to avoid spam
+        if (this.frameCount % 60 === 0) {
+            console.log(`Frame ${this.frameCount}: ${frameTime.toFixed(2)}ms (${this.browserPerformanceMode})`);
+        }
+        
+        // Throttle game loop for better performance on slower browsers
+        if (frameTime > 16.67) { // If frame takes longer than 16.67ms (60fps)
+            console.warn(`Slow frame detected: ${frameTime.toFixed(2)}ms`);
+        }
+        
         requestAnimationFrame(() => this.gameLoop());
     }
 }

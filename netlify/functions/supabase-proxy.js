@@ -421,27 +421,49 @@ exports.handler = async (event, context) => {
             const username = profile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player';
             console.log('🎯 Using username for score:', username);
             
-            // Save to global scores
-            console.log('🔄 Saving to global scores table...');
+            // Save to global scores - only if this is the highest score
+            console.log('🔄 Checking global scores table...');
             console.log('User ID:', user.id);
             console.log('Username:', username);
-            console.log('Score:', score);
+            console.log('Current score:', score);
             
-            const scoreData = {
-                user_id: user.id,
-                username: username,
-                score: score,
-                opti_earned: optiEarned || 0,
-                game_duration: gameDuration || 0,
-                jump_count: jumpCount || 0
-            };
-            
-            console.log('📊 Score data to insert:', scoreData);
-            
-            const { data: globalResult, error: globalError } = await supabase
+            // Check if user has existing score
+            const { data: existingGlobalScore } = await supabase
                 .from('scores')
-                .upsert(scoreData)
-                .select();
+                .select('score')
+                .eq('user_id', user.id)
+                .single();
+            
+            console.log('📊 Existing global score:', existingGlobalScore?.score || 'None');
+            
+            let globalResult = null;
+            let globalError = null;
+            
+            // Only save if this is a new high score
+            if (!existingGlobalScore || score > existingGlobalScore.score) {
+                console.log('🏆 New high score! Saving to global scores...');
+                
+                const scoreData = {
+                    user_id: user.id,
+                    username: username,
+                    score: score,
+                    opti_earned: optiEarned || 0,
+                    game_duration: gameDuration || 0,
+                    jump_count: jumpCount || 0
+                };
+                
+                console.log('📊 Score data to insert:', scoreData);
+                
+                const result = await supabase
+                    .from('scores')
+                    .upsert(scoreData, { onConflict: 'user_id' })
+                    .select();
+                
+                globalResult = result.data;
+                globalError = result.error;
+            } else {
+                console.log('📊 Score not high enough for global LB');
+            }
             
             if (globalError) {
                 console.error('❌ Global score save error:', globalError.message);
@@ -455,30 +477,53 @@ exports.handler = async (event, context) => {
                 console.log('✅ Global score saved successfully:', globalResult);
             }
             
-            // Save to weekly scores
+            // Save to weekly scores - only if this is the highest score for this week
             const weekStart = new Date();
             weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
             weekStart.setHours(0, 0, 0, 0);
             
-            console.log('🔄 Saving to weekly scores table...');
+            console.log('🔄 Checking weekly scores table...');
             console.log('Week start:', weekStart.toISOString());
             
-            const weeklyScoreData = {
-                user_id: user.id,
-                username: username,
-                score: score,
-                opti_earned: optiEarned || 0,
-                week_start: weekStart.toISOString(),
-                game_duration: gameDuration || 0,
-                jump_count: jumpCount || 0
-            };
-            
-            console.log('📊 Weekly score data to insert:', weeklyScoreData);
-            
-            const { data: weeklyResult, error: weeklyError } = await supabase
+            // Check if user has existing score for this week
+            const { data: existingWeeklyScore } = await supabase
                 .from('weekly_scores')
-                .upsert(weeklyScoreData)
-                .select();
+                .select('score')
+                .eq('user_id', user.id)
+                .eq('week_start', weekStart.toISOString())
+                .single();
+            
+            console.log('📊 Existing weekly score:', existingWeeklyScore?.score || 'None');
+            
+            let weeklyResult = null;
+            let weeklyError = null;
+            
+            // Only save if this is a new high score for this week
+            if (!existingWeeklyScore || score > existingWeeklyScore.score) {
+                console.log('🏆 New weekly high score! Saving to weekly scores...');
+                
+                const weeklyScoreData = {
+                    user_id: user.id,
+                    username: username,
+                    score: score,
+                    opti_earned: optiEarned || 0,
+                    week_start: weekStart.toISOString(),
+                    game_duration: gameDuration || 0,
+                    jump_count: jumpCount || 0
+                };
+                
+                console.log('📊 Weekly score data to insert:', weeklyScoreData);
+                
+                const result = await supabase
+                    .from('weekly_scores')
+                    .upsert(weeklyScoreData, { onConflict: 'user_id,week_start' })
+                    .select();
+                
+                weeklyResult = result.data;
+                weeklyError = result.error;
+            } else {
+                console.log('📊 Score not high enough for weekly LB');
+            }
             
             if (weeklyError) {
                 console.error('❌ Weekly score save error:', weeklyError.message);

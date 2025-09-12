@@ -271,15 +271,14 @@ const authFunctions = {
                 return { success: false, error: 'No access token' };
             }
             
-            const response = await fetch('/.netlify/functions/supabase-proxy/profile', {
-                method: 'POST',
+            const response = await fetch('/.netlify/functions/supabase-proxy/profile/username', {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${accessToken}`
                 },
                 body: JSON.stringify({
-                    display_name: newUsername,
-                    username_changed: true
+                    display_name: newUsername
                 })
             });
             

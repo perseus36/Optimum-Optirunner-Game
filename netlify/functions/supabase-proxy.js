@@ -181,6 +181,76 @@ exports.handler = async (event, context) => {
             };
         }
 
+        if (path.includes('/profile/username') && httpMethod === 'PUT') {
+            console.log('👤 Processing username change request');
+            
+            // Get authorization header
+            const authHeader = event.headers.authorization || event.headers.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'No authorization token' })
+                };
+            }
+            
+            const token = authHeader.substring(7);
+            
+            // Verify token and get user
+            const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+            
+            if (authError || !user) {
+                console.error('❌ Auth error:', authError?.message);
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Invalid token' })
+                };
+            }
+            
+            // Check if user already changed username
+            const { data: existingProfile } = await supabase
+                .from('profiles')
+                .select('username_changed')
+                .eq('id', user.id)
+                .single();
+            
+            if (existingProfile?.username_changed) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Username already changed once' })
+                };
+            }
+            
+            // Update username
+            const { data: profile, error: profileError } = await supabase
+                .from('profiles')
+                .update({
+                    display_name: data.display_name,
+                    username_changed: true
+                })
+                .eq('id', user.id)
+                .select()
+                .single();
+            
+            if (profileError) {
+                console.error('❌ Username update error:', profileError.message);
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: profileError.message })
+                };
+            }
+            
+            console.log('✅ Username updated');
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ success: true, data: profile })
+            };
+        }
+
         if (path.includes('/profile') && httpMethod === 'POST') {
             console.log('👤 Processing profile creation/update request');
             
@@ -216,18 +286,54 @@ exports.handler = async (event, context) => {
                 .single();
             
             // Create or update profile with proper merge logic
+            let profileData = {
+                id: user.id,
+                email: user.email,
+                avatar_url: user.user_metadata?.avatar_url || existingProfile?.avatar_url || ''
+            };
+            
+            // Only update fields that are provided
+            if (data.display_name !== undefined) {
+                profileData.display_name = data.display_name;
+            } else if (!existingProfile?.display_name) {
+                profileData.display_name = user.user_metadata?.full_name || 'Player';
+            }
+            
+            if (data.highest_score !== undefined) {
+                profileData.highest_score = data.highest_score;
+            } else if (existingProfile?.highest_score !== undefined) {
+                profileData.highest_score = existingProfile.highest_score;
+            } else {
+                profileData.highest_score = 0;
+            }
+            
+            if (data.opti_points !== undefined) {
+                profileData.opti_points = data.opti_points;
+            } else if (existingProfile?.opti_points !== undefined) {
+                profileData.opti_points = existingProfile.opti_points;
+            } else {
+                profileData.opti_points = 0;
+            }
+            
+            if (data.games_played !== undefined) {
+                profileData.games_played = data.games_played;
+            } else if (existingProfile?.games_played !== undefined) {
+                profileData.games_played = existingProfile.games_played;
+            } else {
+                profileData.games_played = 0;
+            }
+            
+            if (data.username_changed !== undefined) {
+                profileData.username_changed = data.username_changed;
+            } else if (existingProfile?.username_changed !== undefined) {
+                profileData.username_changed = existingProfile.username_changed;
+            } else {
+                profileData.username_changed = false;
+            }
+            
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .upsert({
-                    id: user.id,
-                    display_name: data.display_name || existingProfile?.display_name || user.user_metadata?.full_name || 'Player',
-                    email: user.email,
-                    avatar_url: user.user_metadata?.avatar_url || existingProfile?.avatar_url || '',
-                    highest_score: data.highest_score !== undefined ? data.highest_score : (existingProfile?.highest_score || 0),
-                    opti_points: data.opti_points !== undefined ? data.opti_points : (existingProfile?.opti_points || 0),
-                    games_played: data.games_played !== undefined ? data.games_played : (existingProfile?.games_played || 0),
-                    username_changed: data.username_changed !== undefined ? data.username_changed : (existingProfile?.username_changed || false)
-                })
+                .upsert(profileData)
                 .select()
                 .single();
             

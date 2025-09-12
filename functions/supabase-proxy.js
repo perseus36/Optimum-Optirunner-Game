@@ -100,9 +100,32 @@ exports.handler = async (event, context) => {
         if (path.includes('/profile') && httpMethod === 'GET') {
             console.log('👤 Getting user profile');
             
-            const { data: { user }, error: authError } = await supabase.auth.getUser();
+            // Get token from Authorization header
+            const authHeader = event.headers.authorization || event.headers.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'No valid token provided' })
+                };
+            }
+            
+            const token = authHeader.replace('Bearer ', '');
+            console.log('🔍 Token received:', token.substring(0, 20) + '...');
+            
+            // Create Supabase client with the token
+            const supabaseWithAuth = createClient(supabaseUrl, supabaseKey, {
+                global: {
+                    headers: {
+                        Authorization: `Bearer ${token}`
+                    }
+                }
+            });
+            
+            const { data: { user }, error: authError } = await supabaseWithAuth.auth.getUser();
             
             if (authError || !user) {
+                console.error('❌ Auth error:', authError);
                 return {
                     statusCode: 401,
                     headers,
@@ -110,7 +133,9 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            const { data: profile, error } = await supabase
+            console.log('✅ User authenticated:', user.email);
+            
+            const { data: profile, error } = await supabaseWithAuth
                 .from('profiles')
                 .select('*')
                 .eq('user_id', user.id)

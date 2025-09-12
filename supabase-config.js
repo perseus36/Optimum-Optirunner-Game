@@ -30,6 +30,7 @@ function initSupabase() {
 
         // Set window.supabase for compatibility
         window.supabase = supabase;
+        window.supabaseReady = true;
 
         console.log('✅ Using Netlify Functions for Supabase operations');
         

@@ -21,7 +21,7 @@ exports.handler = async (event, context) => {
     try {
         // Supabase client (environment variables from Netlify)
         const supabaseUrl = process.env.SUPABASE_URL;
-        const supabaseKey = process.env.SUPABASE_ANON_KEY;
+        const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY;
         
         if (!supabaseUrl || !supabaseKey) {
             console.error('❌ Missing Supabase environment variables');
@@ -331,6 +331,8 @@ exports.handler = async (event, context) => {
                 profileData.username_changed = false;
             }
             
+            console.log('🔄 Upserting profile data:', profileData);
+            
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .upsert(profileData)
@@ -339,11 +341,14 @@ exports.handler = async (event, context) => {
             
             if (profileError) {
                 console.error('❌ Profile upsert error:', profileError.message);
+                console.error('Profile error details:', profileError);
                 return {
                     statusCode: 400,
                     headers,
                     body: JSON.stringify({ success: false, error: profileError.message })
                 };
+            } else {
+                console.log('✅ Profile upserted successfully:', profile);
             }
             
             console.log('✅ Profile created/updated');
@@ -402,7 +407,12 @@ exports.handler = async (event, context) => {
             const username = profile?.display_name || user.user_metadata?.full_name || 'Player';
             
             // Save to global scores
-            const { error: globalError } = await supabase
+            console.log('🔄 Saving to global scores table...');
+            console.log('User ID:', user.id);
+            console.log('Username:', username);
+            console.log('Score:', score);
+            
+            const { data: globalResult, error: globalError } = await supabase
                 .from('scores')
                 .upsert({
                     user_id: user.id,
@@ -411,15 +421,19 @@ exports.handler = async (event, context) => {
                     opti_earned: optiEarned || 0,
                     game_duration: gameDuration || 0,
                     jump_count: jumpCount || 0
-                });
+                })
+                .select();
             
             if (globalError) {
                 console.error('❌ Global score save error:', globalError.message);
+                console.error('Global error details:', globalError);
                 return {
                     statusCode: 400,
                     headers,
                     body: JSON.stringify({ success: false, error: globalError.message })
                 };
+            } else {
+                console.log('✅ Global score saved successfully:', globalResult);
             }
             
             // Save to weekly scores
@@ -427,7 +441,10 @@ exports.handler = async (event, context) => {
             weekStart.setDate(weekStart.getDate() - weekStart.getDay() + 1);
             weekStart.setHours(0, 0, 0, 0);
             
-            const { error: weeklyError } = await supabase
+            console.log('🔄 Saving to weekly scores table...');
+            console.log('Week start:', weekStart.toISOString());
+            
+            const { data: weeklyResult, error: weeklyError } = await supabase
                 .from('weekly_scores')
                 .upsert({
                     user_id: user.id,
@@ -437,15 +454,19 @@ exports.handler = async (event, context) => {
                     week_start: weekStart.toISOString(),
                     game_duration: gameDuration || 0,
                     jump_count: jumpCount || 0
-                });
+                })
+                .select();
             
             if (weeklyError) {
                 console.error('❌ Weekly score save error:', weeklyError.message);
+                console.error('Weekly error details:', weeklyError);
                 return {
                     statusCode: 400,
                     headers,
                     body: JSON.stringify({ success: false, error: weeklyError.message })
                 };
+            } else {
+                console.log('✅ Weekly score saved successfully:', weeklyResult);
             }
             
             console.log(`✅ Score saved: ${score} points`);
@@ -468,6 +489,68 @@ exports.handler = async (event, context) => {
                     version: '1.0.0'
                 })
             };
+        }
+
+        // Debug endpoint - test database connection
+        if (path.includes('/debug') && httpMethod === 'GET') {
+            console.log('🔍 Debug endpoint called');
+            
+            try {
+                // Test profiles table
+                const { data: profiles, error: profilesError } = await supabase
+                    .from('profiles')
+                    .select('*')
+                    .limit(5);
+                
+                // Test scores table
+                const { data: scores, error: scoresError } = await supabase
+                    .from('scores')
+                    .select('*')
+                    .limit(5);
+                
+                // Test weekly_scores table
+                const { data: weeklyScores, error: weeklyScoresError } = await supabase
+                    .from('weekly_scores')
+                    .select('*')
+                    .limit(5);
+                
+                return {
+                    statusCode: 200,
+                    headers,
+                    body: JSON.stringify({
+                        success: true,
+                        data: {
+                            profiles: {
+                                count: profiles?.length || 0,
+                                data: profiles,
+                                error: profilesError?.message
+                            },
+                            scores: {
+                                count: scores?.length || 0,
+                                data: scores,
+                                error: scoresError?.message
+                            },
+                            weekly_scores: {
+                                count: weeklyScores?.length || 0,
+                                data: weeklyScores,
+                                error: weeklyScoresError?.message
+                            },
+                            supabase_url: supabaseUrl ? 'SET' : 'NOT_SET',
+                            supabase_key: supabaseKey ? 'SET' : 'NOT_SET'
+                        }
+                    })
+                };
+            } catch (error) {
+                console.error('❌ Debug endpoint error:', error);
+                return {
+                    statusCode: 500,
+                    headers,
+                    body: JSON.stringify({
+                        success: false,
+                        error: error.message
+                    })
+                };
+            }
         }
 
         // Default response

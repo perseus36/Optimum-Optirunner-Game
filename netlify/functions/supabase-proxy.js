@@ -209,18 +209,19 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            // Check if user already changed username
+            // Check if user already changed username (allow 2 changes)
             const { data: existingProfile } = await supabase
                 .from('profiles')
-                .select('username_changed, display_name')
+                .select('username_changed, display_name, username_change_count')
                 .eq('user_id', user.id)
                 .single();
             
-            if (existingProfile?.username_changed) {
+            const changeCount = existingProfile?.username_change_count || 0;
+            if (changeCount >= 2) {
                 return {
                     statusCode: 400,
                     headers,
-                    body: JSON.stringify({ success: false, error: 'Username already changed once' })
+                    body: JSON.stringify({ success: false, error: 'Username can only be changed 2 times' })
                 };
             }
             
@@ -229,7 +230,8 @@ exports.handler = async (event, context) => {
                 .from('profiles')
                 .update({
                     display_name: data.display_name,
-                    username_changed: true
+                    username_changed: true,
+                    username_change_count: changeCount + 1
                 })
                 .eq('user_id', user.id)
                 .select()

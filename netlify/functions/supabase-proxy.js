@@ -210,13 +210,48 @@ exports.handler = async (event, context) => {
             }
             
             // Check if user already changed username (allow 2 changes)
-            const { data: existingProfile } = await supabase
-                .from('profiles')
-                .select('username_changed, display_name, username_change_count')
-                .eq('user_id', user.id)
-                .single();
+            // Try to fetch with username_change_count first, fallback to legacy method
+            let existingProfile, fetchError, changeCount = 0;
             
-            const changeCount = existingProfile?.username_change_count || 0;
+            try {
+                const result = await supabase
+                    .from('profiles')
+                    .select('username_changed, display_name, username_change_count')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                existingProfile = result.data;
+                fetchError = result.error;
+                
+                if (existingProfile && existingProfile.username_change_count !== undefined) {
+                    changeCount = existingProfile.username_change_count;
+                } else {
+                    // Fallback to legacy method
+                    changeCount = existingProfile?.username_changed ? 1 : 0;
+                }
+            } catch (error) {
+                console.log('⚠️ Using legacy username change detection');
+                // Fallback to legacy method
+                const legacyResult = await supabase
+                    .from('profiles')
+                    .select('username_changed, display_name')
+                    .eq('user_id', user.id)
+                    .single();
+                
+                existingProfile = legacyResult.data;
+                fetchError = legacyResult.error;
+                changeCount = existingProfile?.username_changed ? 1 : 0;
+            }
+            
+            if (fetchError) {
+                console.error('❌ Error fetching profile for username change:', fetchError);
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Failed to fetch profile' })
+                };
+            }
+            
             if (changeCount >= 2) {
                 return {
                     statusCode: 400,
@@ -226,13 +261,24 @@ exports.handler = async (event, context) => {
             }
             
             // Update username in profile
+            const updateData = {
+                display_name: data.display_name,
+                username_changed: true
+            };
+            
+            // Only add username_change_count if we successfully got it from the profile
+            if (existingProfile && existingProfile.username_change_count !== undefined) {
+                updateData.username_change_count = changeCount + 1;
+                console.log('✅ Using new username_change_count system');
+            } else {
+                console.log('⚠️ Using legacy username_changed system');
+            }
+            
+            console.log('🔄 Updating profile with data:', updateData);
+            
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .update({
-                    display_name: data.display_name,
-                    username_changed: true,
-                    username_change_count: changeCount + 1
-                })
+                .update(updateData)
                 .eq('user_id', user.id)
                 .select()
                 .single();

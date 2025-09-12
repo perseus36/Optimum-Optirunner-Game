@@ -1968,23 +1968,37 @@ class Game {
             
             // First get current profile to preserve existing values
             const currentProfile = await window.authFunctions.getUserProfile();
+            console.log('📊 Current profile data:', currentProfile);
+            
             let currentOptiPoints = 0;
             let currentHighestScore = 0;
+            let currentGamesPlayed = 0;
+            let currentDisplayName = 'Player';
             
             if (currentProfile.success && currentProfile.data) {
                 currentOptiPoints = currentProfile.data.opti_points || 0;
                 currentHighestScore = currentProfile.data.highest_score || 0;
+                currentGamesPlayed = currentProfile.data.games_played || 0;
+                currentDisplayName = currentProfile.data.display_name || 'Player';
             }
             
             // Update score and OPTI points
             const newOptiPoints = currentOptiPoints + optiEarned;
             const newHighestScore = Math.max(currentHighestScore, this.score);
+            const newGamesPlayed = currentGamesPlayed + 1;
             
-            const result = await window.authFunctions.createUserProfile({
-                display_name: currentProfile.data?.display_name || 'Player',
+            console.log('📊 Profile update data:', {
+                display_name: currentDisplayName,
                 highest_score: newHighestScore,
                 opti_points: newOptiPoints,
-                games_played: (currentProfile.data?.games_played || 0) + 1
+                games_played: newGamesPlayed
+            });
+            
+            const result = await window.authFunctions.createUserProfile({
+                display_name: currentDisplayName,
+                highest_score: newHighestScore,
+                opti_points: newOptiPoints,
+                games_played: newGamesPlayed
             });
             
             if (result.success) {

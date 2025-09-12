@@ -183,6 +183,7 @@ exports.handler = async (event, context) => {
 
         if (path.includes('/profile/username') && httpMethod === 'PUT') {
             console.log('👤 Processing username change request');
+            console.log('New username:', data.display_name);
             
             // Get authorization header
             const authHeader = event.headers.authorization || event.headers.Authorization;
@@ -211,7 +212,7 @@ exports.handler = async (event, context) => {
             // Check if user already changed username
             const { data: existingProfile } = await supabase
                 .from('profiles')
-                .select('username_changed')
+                .select('username_changed, display_name')
                 .eq('user_id', user.id)
                 .single();
             
@@ -223,7 +224,7 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            // Update username
+            // Update username in profile
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
                 .update({
@@ -243,7 +244,31 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            console.log('✅ Username updated');
+            // Update username in existing scores
+            const { error: scoresUpdateError } = await supabase
+                .from('scores')
+                .update({ username: data.display_name })
+                .eq('user_id', user.id);
+            
+            if (scoresUpdateError) {
+                console.error('❌ Scores username update error:', scoresUpdateError.message);
+            } else {
+                console.log('✅ Scores username updated');
+            }
+            
+            // Update username in existing weekly scores
+            const { error: weeklyScoresUpdateError } = await supabase
+                .from('weekly_scores')
+                .update({ username: data.display_name })
+                .eq('user_id', user.id);
+            
+            if (weeklyScoresUpdateError) {
+                console.error('❌ Weekly scores username update error:', weeklyScoresUpdateError.message);
+            } else {
+                console.log('✅ Weekly scores username updated');
+            }
+            
+            console.log('✅ Username updated in all tables');
             return {
                 statusCode: 200,
                 headers,
@@ -253,6 +278,7 @@ exports.handler = async (event, context) => {
 
         if (path.includes('/profile') && httpMethod === 'POST') {
             console.log('👤 Processing profile creation/update request');
+            console.log('Request data:', data);
             
             // Get authorization header
             const authHeader = event.headers.authorization || event.headers.Authorization;
@@ -278,66 +304,47 @@ exports.handler = async (event, context) => {
                 };
             }
             
-            // Get existing profile to preserve current values
-            const { data: existingProfile } = await supabase
+            console.log('👤 User verified:', user.id);
+            
+            // Check if profile exists
+            const { data: existingProfile, error: fetchError } = await supabase
                 .from('profiles')
                 .select('*')
                 .eq('user_id', user.id)
                 .single();
             
-            // Create or update profile with proper merge logic
-            let profileData = {
+            if (fetchError && fetchError.code !== 'PGRST116') {
+                console.error('❌ Error fetching existing profile:', fetchError);
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: fetchError.message })
+                };
+            }
+            
+            console.log('👤 Existing profile:', existingProfile);
+            
+            // Prepare profile data with proper defaults
+            const profileData = {
                 user_id: user.id,
                 email: user.email,
-                avatar_url: user.user_metadata?.avatar_url || existingProfile?.avatar_url || ''
+                avatar_url: user.user_metadata?.avatar_url || existingProfile?.avatar_url || '',
+                display_name: data.display_name || existingProfile?.display_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player',
+                highest_score: data.highest_score !== undefined ? data.highest_score : (existingProfile?.highest_score || 0),
+                opti_points: data.opti_points !== undefined ? data.opti_points : (existingProfile?.opti_points || 0),
+                games_played: data.games_played !== undefined ? data.games_played : (existingProfile?.games_played || 0),
+                username_changed: data.username_changed !== undefined ? data.username_changed : (existingProfile?.username_changed || false)
             };
-            
-            // Only update fields that are provided
-            if (data.display_name !== undefined) {
-                profileData.display_name = data.display_name;
-            } else if (existingProfile?.display_name) {
-                profileData.display_name = existingProfile.display_name;
-            } else {
-                profileData.display_name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Player';
-            }
-            
-            if (data.highest_score !== undefined) {
-                profileData.highest_score = data.highest_score;
-            } else if (existingProfile?.highest_score !== undefined) {
-                profileData.highest_score = existingProfile.highest_score;
-            } else {
-                profileData.highest_score = 0;
-            }
-            
-            if (data.opti_points !== undefined) {
-                profileData.opti_points = data.opti_points;
-            } else if (existingProfile?.opti_points !== undefined) {
-                profileData.opti_points = existingProfile.opti_points;
-            } else {
-                profileData.opti_points = 0;
-            }
-            
-            if (data.games_played !== undefined) {
-                profileData.games_played = data.games_played;
-            } else if (existingProfile?.games_played !== undefined) {
-                profileData.games_played = existingProfile.games_played;
-            } else {
-                profileData.games_played = 0;
-            }
-            
-            if (data.username_changed !== undefined) {
-                profileData.username_changed = data.username_changed;
-            } else if (existingProfile?.username_changed !== undefined) {
-                profileData.username_changed = existingProfile.username_changed;
-            } else {
-                profileData.username_changed = false;
-            }
             
             console.log('🔄 Upserting profile data:', profileData);
             
+            // Use upsert with conflict resolution
             const { data: profile, error: profileError } = await supabase
                 .from('profiles')
-                .upsert(profileData)
+                .upsert(profileData, { 
+                    onConflict: 'user_id',
+                    ignoreDuplicates: false 
+                })
                 .select()
                 .single();
             
@@ -349,11 +356,9 @@ exports.handler = async (event, context) => {
                     headers,
                     body: JSON.stringify({ success: false, error: profileError.message })
                 };
-            } else {
-                console.log('✅ Profile upserted successfully:', profile);
             }
             
-            console.log('✅ Profile created/updated');
+            console.log('✅ Profile upserted successfully:', profile);
             return {
                 statusCode: 200,
                 headers,

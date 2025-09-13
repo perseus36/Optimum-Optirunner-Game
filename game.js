@@ -677,6 +677,9 @@ class Game {
         // Hide How to Play button when game starts
         document.getElementById('howToPlayBtn').style.display = 'none';
         
+        // Hide Tournament button when game starts
+        document.getElementById('tournamentBtn').style.display = 'none';
+        
         // Start background music
         this.startBackgroundMusic();
         
@@ -692,6 +695,9 @@ class Game {
         
         // Show How to Play button when restarting
         document.getElementById('howToPlayBtn').style.display = 'block';
+        
+        // Show Tournament button when restarting
+        document.getElementById('tournamentBtn').style.display = 'block';
         
         this.startGame();
     }
@@ -761,6 +767,9 @@ class Game {
         
         // Show How to Play button when returning to main menu
         document.getElementById('howToPlayBtn').style.display = 'block';
+        
+        // Show Tournament button when returning to main menu
+        document.getElementById('tournamentBtn').style.display = 'block';
         
         // Stop background music
         this.stopBackgroundMusic();
@@ -1203,6 +1212,9 @@ class Game {
             // Show How to Play button when game ends (even with suspicious score)
             document.getElementById('howToPlayBtn').style.display = 'block';
             
+            // Show Tournament button when game ends (even with suspicious score)
+            document.getElementById('tournamentBtn').style.display = 'block';
+            
             return; // Exit without saving
         }
         
@@ -1215,6 +1227,9 @@ class Game {
         
         // Show How to Play button when game ends
         document.getElementById('howToPlayBtn').style.display = 'block';
+        
+        // Show Tournament button when game ends
+        document.getElementById('tournamentBtn').style.display = 'block';
         
         console.log('✅ Game over screen displayed');
         this.updateUI();

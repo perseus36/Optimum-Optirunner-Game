@@ -33,6 +33,7 @@ class Game {
         this.username = localStorage.getItem('username') || '';
         this.leaderboardVisible = false;
         this.howToPlayVisible = false;
+        this.tournamentVisible = false;
         this.weeklyLeaderboardUnsubscribe = null;
         
         // Main character
@@ -393,13 +394,33 @@ class Game {
             });
         }
         
-        // ESC key to close leaderboard or how to play
+        // Tournament button
+        const tournamentBtn = document.getElementById('tournamentBtn');
+        if (tournamentBtn) {
+            tournamentBtn.addEventListener('click', () => {
+                console.log('Tournament button clicked');
+                this.showTournament();
+            });
+        }
+        
+        // Close Tournament button (X)
+        const closeTournamentBtn = document.getElementById('closeTournamentBtn');
+        if (closeTournamentBtn) {
+            closeTournamentBtn.addEventListener('click', () => {
+                this.hideTournament();
+            });
+        }
+        
+        // ESC key to close overlays
         document.addEventListener('keydown', (e) => {
             if (e.key === 'Escape' && this.leaderboardVisible) {
                 this.hideLeaderboard();
             }
             if (e.key === 'Escape' && this.howToPlayVisible) {
                 this.hideHowToPlay();
+            }
+            if (e.key === 'Escape' && this.tournamentVisible) {
+                this.hideTournament();
             }
         });
         
@@ -1907,6 +1928,16 @@ class Game {
     hideHowToPlay() {
         document.getElementById('howToPlayOverlay').style.display = 'none';
         this.howToPlayVisible = false;
+    }
+    
+    showTournament() {
+        document.getElementById('tournamentOverlay').style.display = 'flex';
+        this.tournamentVisible = true;
+    }
+    
+    hideTournament() {
+        document.getElementById('tournamentOverlay').style.display = 'none';
+        this.tournamentVisible = false;
     }
     
     // populateLeaderboard method removed - replaced with Firebase version above

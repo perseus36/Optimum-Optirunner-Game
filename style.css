@@ -1019,6 +1019,51 @@ button:active {
     overflow: visible !important;
 }
 
+/* Legacy Score Notice styles */
+.legacy-score-notice {
+    position: absolute;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(135deg, rgba(255, 193, 7, 0.95), rgba(255, 235, 59, 0.95));
+    border: 2px solid #ffc107;
+    border-radius: 15px;
+    padding: 15px 25px;
+    max-width: 600px;
+    width: 90%;
+    text-align: center;
+    z-index: 1001;
+    box-shadow: 0 8px 32px rgba(255, 193, 7, 0.3);
+    backdrop-filter: blur(10px);
+    animation: noticeGlow 2s ease-in-out infinite alternate;
+}
+
+.legacy-score-notice .notice-content p {
+    margin: 8px 0;
+    font-size: 14px;
+    font-weight: 500;
+    color: #333;
+    line-height: 1.4;
+}
+
+.legacy-score-notice .discord-link {
+    font-size: 16px !important;
+    font-weight: 600 !important;
+    color: #1976d2 !important;
+    margin-top: 10px !important;
+}
+
+@keyframes noticeGlow {
+    0% {
+        box-shadow: 0 8px 32px rgba(255, 193, 7, 0.3);
+        border-color: #ffc107;
+    }
+    100% {
+        box-shadow: 0 12px 40px rgba(255, 193, 7, 0.5);
+        border-color: #ffeb3b;
+    }
+}
+
 /* Tournament button styles */
 .tournament-btn {
     position: absolute;

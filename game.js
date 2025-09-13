@@ -36,6 +36,10 @@ class Game {
         this.tournamentVisible = false;
         this.weeklyLeaderboardUnsubscribe = null;
         
+        // Legacy score notice visibility
+        this.legacyNoticeShown = localStorage.getItem('legacyNoticeShown') === 'true';
+        this.hasPlayedGame = localStorage.getItem('hasPlayedGame') === 'true';
+        
         // Main character
         this.player = {
             x: 150, // Position according to new canvas size
@@ -195,10 +199,42 @@ class Game {
         // Initialize authentication UI
         this.updateAuthUI();
         
+        // Check if legacy notice should be shown
+        this.checkLegacyNotice();
+        
         // Maintenance popup removed
         
         // Game loop
         this.gameLoop();
+    }
+    
+    // Check if legacy notice should be shown
+    checkLegacyNotice() {
+        // Show notice only if:
+        // 1. User hasn't seen it before, OR
+        // 2. User has played a game before (returning player)
+        if (!this.legacyNoticeShown || this.hasPlayedGame) {
+            this.showLegacyNotice();
+        }
+    }
+    
+    // Show legacy notice
+    showLegacyNotice() {
+        const notice = document.getElementById('legacyScoreNotice');
+        if (notice) {
+            notice.style.display = 'block';
+            // Mark as shown
+            localStorage.setItem('legacyNoticeShown', 'true');
+            this.legacyNoticeShown = true;
+        }
+    }
+    
+    // Hide legacy notice
+    hideLegacyNotice() {
+        const notice = document.getElementById('legacyScoreNotice');
+        if (notice) {
+            notice.style.display = 'none';
+        }
     }
     
     // Maintenance popup removed
@@ -632,6 +668,9 @@ class Game {
         this.bonusCount = 0; // Reset bonus count for new game
         // this.opti sıfırlanmaz - kalıcı olarak saklanır
         
+        // Hide legacy notice when game starts
+        this.hideLegacyNotice();
+        
         // Reset anti-cheat tracking
         this.gameStartTime = Date.now();
         this.gameEndTime = null;
@@ -698,6 +737,9 @@ class Game {
         
         // Show Tournament button when restarting
         document.getElementById('tournamentBtn').style.display = 'block';
+        
+        // Show legacy notice when returning to menu
+        this.showLegacyNotice();
         
         this.startGame();
     }
@@ -770,6 +812,9 @@ class Game {
         
         // Show Tournament button when returning to main menu
         document.getElementById('tournamentBtn').style.display = 'block';
+        
+        // Show legacy notice when returning to main menu
+        this.showLegacyNotice();
         
         // Stop background music
         this.stopBackgroundMusic();
@@ -1185,6 +1230,10 @@ class Game {
         console.log('Game running:', this.gameRunning);
         console.log('Game over:', this.gameOver);
         
+        // Mark that user has played a game
+        localStorage.setItem('hasPlayedGame', 'true');
+        this.hasPlayedGame = true;
+        
         this.gameRunning = false;
         this.gameOver = true;
         
@@ -1215,6 +1264,9 @@ class Game {
             // Show Tournament button when game ends (even with suspicious score)
             document.getElementById('tournamentBtn').style.display = 'block';
             
+            // Show legacy notice when game ends (even with suspicious score)
+            this.showLegacyNotice();
+            
             return; // Exit without saving
         }
         
@@ -1230,6 +1282,9 @@ class Game {
         
         // Show Tournament button when game ends
         document.getElementById('tournamentBtn').style.display = 'block';
+        
+        // Show legacy notice when game ends
+        this.showLegacyNotice();
         
         console.log('✅ Game over screen displayed');
         this.updateUI();

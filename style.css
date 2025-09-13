@@ -1037,6 +1037,9 @@ button:active {
     z-index: 1100;
     box-shadow: 0 8px 25px rgba(255, 215, 0, 0.4);
     backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .tournament-btn:hover {

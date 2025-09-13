@@ -1089,17 +1089,34 @@ button:active {
     align-items: center;
     justify-content: center;
     padding: 0;
+    margin: 0;
+    box-shadow: none !important;
+    outline: none !important;
     filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 45px rgba(255, 215, 0, 0.4));
 }
 
 .tournament-btn:hover {
     transform: translateY(-50%) scale(1.1) !important;
+    box-shadow: none !important;
+    outline: none !important;
     filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 60px rgba(255, 215, 0, 0.6));
 }
 
 .tournament-btn:active {
     transform: translateY(-50%) scale(0.95) !important;
+    box-shadow: none !important;
+    outline: none !important;
     filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 20px rgba(255, 215, 0, 0.4)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.3));
+}
+
+.tournament-btn:focus {
+    box-shadow: none !important;
+    outline: none !important;
+}
+
+.tournament-btn:focus-visible {
+    box-shadow: none !important;
+    outline: none !important;
 }
 
 /* Tournament icon styles */

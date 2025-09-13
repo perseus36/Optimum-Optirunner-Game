@@ -1025,15 +1025,15 @@ button:active {
     top: 20px;
     left: 50%;
     transform: translateX(-50%);
-    background: linear-gradient(135deg, rgba(255, 193, 7, 0.95), rgba(255, 235, 59, 0.95));
-    border: 2px solid #ffc107;
+    background: linear-gradient(135deg, #4ecdc4, #44a08d);
+    border: 2px solid rgba(78, 205, 196, 0.3);
     border-radius: 15px;
     padding: 15px 25px;
     max-width: 600px;
     width: 90%;
     text-align: center;
     z-index: 1001;
-    box-shadow: 0 8px 32px rgba(255, 193, 7, 0.3);
+    box-shadow: 0 8px 32px rgba(78, 205, 196, 0.3);
     backdrop-filter: blur(10px);
     animation: noticeGlow 2s ease-in-out infinite alternate;
 }
@@ -1042,25 +1042,26 @@ button:active {
     margin: 8px 0;
     font-size: 14px;
     font-weight: 500;
-    color: #333;
+    color: white;
     line-height: 1.4;
 }
 
 .legacy-score-notice .discord-link {
     font-size: 16px !important;
     font-weight: 600 !important;
-    color: #1976d2 !important;
+    color: #ffffff !important;
     margin-top: 10px !important;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
 }
 
 @keyframes noticeGlow {
     0% {
-        box-shadow: 0 8px 32px rgba(255, 193, 7, 0.3);
-        border-color: #ffc107;
+        box-shadow: 0 8px 32px rgba(78, 205, 196, 0.3);
+        border-color: rgba(78, 205, 196, 0.3);
     }
     100% {
-        box-shadow: 0 12px 40px rgba(255, 193, 7, 0.5);
-        border-color: #ffeb3b;
+        box-shadow: 0 12px 40px rgba(78, 205, 196, 0.6);
+        border-color: rgba(78, 205, 196, 0.6);
     }
 }
 

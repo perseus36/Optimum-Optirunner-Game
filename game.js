@@ -73,8 +73,8 @@ class Game {
         // Obstacles
         this.obstacles = [];
         this.obstacleSpeed = 3;
-        this.obstacleSpawnRate = 120; // Spawn obstacle every 120 frames
-        this.baseObstacleSpawnRate = 120; // Base spawn rate to calculate increases
+        this.obstacleSpawnRate = 60; // Spawn obstacle every 60 frames (1 second at 60 FPS)
+        this.baseObstacleSpawnRate = 60; // Base spawn rate to calculate increases
         this.obstacleSpeedIncreaseInterval = 600; // 10 seconds (60 FPS * 10)
         this.obstacleSpeedIncreaseAmount = 0.20; // 20% increase every 10 seconds
         this.currentObstacleSpeedMultiplier = 1; // Current speed multiplier
@@ -84,7 +84,7 @@ class Game {
         this.speedIncreaseStarted = false; // Whether speed increase has started
         
         // Time-based game loop variables
-        this.lastTime = performance.now();
+        this.lastTime = null; // Will be initialized in gameLoop
         this.spawnTimer = 0; // Time-based spawn timer
         this.bonusSpawnTimer = 0; // Time-based bonus spawn timer
         this.speedIncreaseTimer = 0; // Time-based speed increase timer
@@ -126,7 +126,7 @@ class Game {
         
         // Bonus system
         this.bonuses = [];
-        this.bonusSpawnRate = 300; // Spawn bonus every 300 frames (approximately 5 seconds)
+        this.bonusSpawnRate = 180; // Spawn bonus every 180 frames (approximately 3 seconds at 60 FPS)
         this.bonusSprite = new Image();
         this.bonusSprite.src = 'assets/sprites/bonus.webp';
         
@@ -916,6 +916,7 @@ class Game {
         this.spawnTimer += dt;
         
         // Convert frame-based spawn rate to time-based (assuming 60 FPS base)
+        // obstacleSpawnRate is in frames, so divide by 60 to get seconds
         const baseSpawnInterval = this.obstacleSpawnRate / 60; // Convert frames to seconds
         const spawnInterval = baseSpawnInterval / this.currentObstacleSpeedMultiplier;
         
@@ -3218,6 +3219,12 @@ class Game {
     
     gameLoop() {
         const now = performance.now();
+        
+        // Initialize lastTime on first frame
+        if (!this.lastTime) {
+            this.lastTime = now;
+        }
+        
         const dt = Math.min(0.05, (now - this.lastTime) / 1000); // clamp to 50ms
         this.lastTime = now;
         

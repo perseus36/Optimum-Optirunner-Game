@@ -73,8 +73,8 @@ class Game {
         // Obstacles
         this.obstacles = [];
         this.obstacleSpeed = 3;
-        this.obstacleSpawnRate = 60; // Spawn obstacle every 60 frames (1 second at 60 FPS)
-        this.baseObstacleSpawnRate = 60; // Base spawn rate to calculate increases
+        this.obstacleSpawnRate = 120; // Spawn obstacle every 120 frames
+        this.baseObstacleSpawnRate = 120; // Base spawn rate to calculate increases
         this.obstacleSpeedIncreaseInterval = 600; // 10 seconds (60 FPS * 10)
         this.obstacleSpeedIncreaseAmount = 0.20; // 20% increase every 10 seconds
         this.currentObstacleSpeedMultiplier = 1; // Current speed multiplier
@@ -82,12 +82,6 @@ class Game {
         this.lastObstacleSpawnFrame = 0; // Frame when last obstacle spawned
         this.gameStartFrame = 0; // Frame when game started
         this.speedIncreaseStarted = false; // Whether speed increase has started
-        
-        // Time-based game loop variables
-        this.lastTime = null; // Will be initialized in gameLoop
-        this.spawnTimer = 0; // Time-based spawn timer
-        this.bonusSpawnTimer = 0; // Time-based bonus spawn timer
-        this.speedIncreaseTimer = 0; // Time-based speed increase timer
         
         // Browser performance detection
         this.browserPerformanceMode = this.detectBrowserPerformance();
@@ -126,7 +120,7 @@ class Game {
         
         // Bonus system
         this.bonuses = [];
-        this.bonusSpawnRate = 180; // Spawn bonus every 180 frames (approximately 3 seconds at 60 FPS)
+        this.bonusSpawnRate = 300; // Spawn bonus every 300 frames (approximately 5 seconds)
         this.bonusSprite = new Image();
         this.bonusSprite.src = 'assets/sprites/bonus.webp';
         
@@ -795,19 +789,16 @@ class Game {
     
     jump() {
         if (!this.player.jumping) {
-            // Convert jump power to pixels per second
-            const jumpPowerPxPerSec = this.player.jumpPower * 60; // Convert to px/sec
-            this.player.velocityY = jumpPowerPxPerSec;
+            this.player.velocityY = this.player.jumpPower;
             this.player.jumping = true;
             this.jumpCount++; // Increment jump counter for anti-cheat
         }
     }
     
-    updatePlayer(dt) {
-        // Apply gravity (now in pixels per second squared)
-        const gravityPxPerSec2 = this.player.gravity * 60 * 60; // Convert to px/sec²
-        this.player.velocityY += gravityPxPerSec2 * dt;
-        this.player.y += this.player.velocityY * dt;
+    updatePlayer() {
+        // Apply gravity
+        this.player.velocityY += this.player.gravity;
+        this.player.y += this.player.velocityY;
         
         // Ground check
         if (this.player.y >= this.ground - this.player.height) {
@@ -911,16 +902,19 @@ class Game {
     
 
     
-    spawnObstacle(dt) {
-        // Time-based spawn system
-        this.spawnTimer += dt;
+    spawnObstacle() {
+        // Current fixed distance: 120 frames
+        // Random distance: between 20% shorter and 25% longer
+        const minDistance = Math.floor(this.obstacleSpawnRate * 0.8); // 20% shorter (96 frames)
+        const maxDistance = Math.floor(this.obstacleSpawnRate * 1.25); // 25% longer (150 frames)
         
-        // Convert frame-based spawn rate to time-based (assuming 60 FPS base)
-        // obstacleSpawnRate is in frames, so divide by 60 to get seconds
-        const baseSpawnInterval = this.obstacleSpawnRate / 60; // Convert frames to seconds
-        const spawnInterval = baseSpawnInterval / this.currentObstacleSpeedMultiplier;
+        // Number of frames since last obstacle
+        const framesSinceLastObstacle = this.frameCount - this.lastObstacleSpawnFrame;
         
-        if (this.spawnTimer >= spawnInterval) {
+        // Calculate random distance
+        const randomDistance = Math.floor(Math.random() * (maxDistance - minDistance + 1)) + minDistance;
+        
+        if (framesSinceLastObstacle >= randomDistance) {
             // Randomly select stone graphic (1 or 2)
             const stoneType = Math.random() < 0.5 ? 1 : 2;
             
@@ -952,8 +946,8 @@ class Game {
             };
             this.obstacles.push(obstacle);
             
-            // Reset spawn timer for next obstacle
-            this.spawnTimer -= spawnInterval;
+            // Update last obstacle spawn frame
+            this.lastObstacleSpawnFrame = this.frameCount;
             
                          // Debug information
              if (shouldBeGiant) {
@@ -964,14 +958,8 @@ class Game {
         }
     }
     
-    spawnBonus(dt) {
-        // Time-based bonus spawn system
-        this.bonusSpawnTimer += dt;
-        
-        // Convert frame-based spawn rate to time-based (assuming 60 FPS base)
-        const bonusSpawnInterval = this.bonusSpawnRate / 60; // Convert frames to seconds
-        
-        if (this.bonusSpawnTimer >= bonusSpawnInterval) {
+    spawnBonus() {
+        if (this.frameCount % this.bonusSpawnRate === 0) {
             // Set bonus dimensions in original proportions
             const bonusWidth = 40; // Width
             const bonusHeight = 40; // Height (same as width - square format)
@@ -984,19 +972,15 @@ class Game {
                 collected: false
             };
             this.bonuses.push(bonus);
-            
-            // Reset bonus spawn timer
-            this.bonusSpawnTimer -= bonusSpawnInterval;
         }
     }
     
-    updateObstacles(dt) {
+    updateObstacles() {
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obstacle = this.obstacles[i];
             
-            // Move obstacle to the left with dynamic speed (now in pixels per second)
-            const obstacleSpeedPxPerSec = this.obstacleSpeed * this.currentObstacleSpeedMultiplier * 60; // Convert to px/sec
-            obstacle.x -= obstacleSpeedPxPerSec * dt;
+            // Move obstacle to the left with dynamic speed
+            obstacle.x -= this.obstacleSpeed * this.currentObstacleSpeedMultiplier;
             
             // Check if giant obstacle should activate (when 200 frames away from player)
             if (obstacle.isGiant && !obstacle.giantActivated) {
@@ -1056,13 +1040,12 @@ class Game {
         }
     }
     
-    updateBonuses(dt) {
+    updateBonuses() {
         for (let i = this.bonuses.length - 1; i >= 0; i--) {
             const bonus = this.bonuses[i];
             
-            // Move bonus to the left with dynamic speed (now in pixels per second)
-            const bonusSpeedPxPerSec = this.obstacleSpeed * this.currentObstacleSpeedMultiplier * 60; // Convert to px/sec
-            bonus.x -= bonusSpeedPxPerSec * dt;
+            // Move bonus to the left with dynamic speed
+            bonus.x -= this.obstacleSpeed * this.currentObstacleSpeedMultiplier;
             
             // Remove bonuses that exit the screen
             if (bonus.x + bonus.width < 0) {
@@ -1089,11 +1072,10 @@ class Game {
         }
     }
     
-    updateClouds(dt) {
-        // Move clouds to the left (50% slower than obstacles) - now in pixels per second
+    updateClouds() {
+        // Move clouds to the left (50% slower than obstacles)
         this.clouds.forEach((cloud, index) => {
-            const cloudSpeedPxPerSec = cloud.speed * 60; // Convert to px/sec
-            cloud.x -= cloudSpeedPxPerSec * dt;
+            cloud.x -= cloud.speed;
             
             // Move cloud to right side when it exits left side of screen
             if (cloud.x + cloud.width < 0) {
@@ -1708,37 +1690,32 @@ class Game {
     
     // updateAnimation function removed - GIF automatically animates
     
-    update(dt) {
+    update() {
         if (this.gameRunning && !this.gameOver && !this.gamePaused) {
-            this.updatePlayer(dt);
-            this.updateObstacleSpeed(dt);
-            this.spawnObstacle(dt);
-            this.spawnBonus(dt);
-            this.updateObstacles(dt);
-            this.updateBonuses(dt);
-            this.updateClouds(dt); // Add cloud animation
+            this.updatePlayer();
+            this.updateObstacleSpeed();
+            this.spawnObstacle();
+            this.spawnBonus();
+            this.updateObstacles();
+            this.updateBonuses();
+            this.updateClouds(); // Add cloud animation
             this.frameCount++;
             
             // Sprite animation update
-            this.updateSpriteAnimation(dt);
+            this.updateSpriteAnimation();
             
-            // Update game time (now in real seconds)
-            this.totalGameTime += dt * 1000; // Convert to milliseconds
+            // Update game time
+            this.totalGameTime += 16.67; // Approximate 60 FPS
         }
     }
     
 
     
-    updateSpriteAnimation(dt) {
-        // Time-based sprite animation
-        this.animationCounter += dt;
-        
-        // Convert frame-based animation speed to time-based (assuming 60 FPS base)
-        const animationInterval = this.animationSpeed / 60; // Convert frames to seconds
-        
-        if (this.animationCounter >= animationInterval) {
+    updateSpriteAnimation() {
+        this.animationCounter++;
+        if (this.animationCounter >= this.animationSpeed) {
             this.currentSprite = (this.currentSprite + 1) % 2; // Changes between 0 and 1
-            this.animationCounter -= animationInterval; // Reset counter
+            this.animationCounter = 0;
         }
     }
     
@@ -3218,17 +3195,7 @@ class Game {
     // Browser optimizations removed - using default game settings
     
     gameLoop() {
-        const now = performance.now();
-        
-        // Initialize lastTime on first frame
-        if (!this.lastTime) {
-            this.lastTime = now;
-        }
-        
-        const dt = Math.min(0.05, (now - this.lastTime) / 1000); // clamp to 50ms
-        this.lastTime = now;
-        
-        this.update(dt);
+        this.update();
         this.draw();
         requestAnimationFrame(() => this.gameLoop());
     }

@@ -325,6 +325,10 @@ class Game {
     setupEventListeners() {
         console.log('🔧 Setting up event listeners...');
         
+        // Disable right-click and mouse scroll in game
+        this.disableContextMenu();
+        this.disableMouseScroll();
+        
         // Jumping with Space key
         document.addEventListener('keydown', (e) => {
             if (e.code === 'Space' && this.gameRunning && !this.gameOver && !this.gamePaused) {
@@ -3151,6 +3155,38 @@ class Game {
         }
         
         return performanceMode;
+    }
+    
+    // Disable right-click context menu
+    disableContextMenu() {
+        document.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+        
+        // Also disable on canvas specifically
+        this.canvas.addEventListener('contextmenu', (e) => {
+            e.preventDefault();
+            return false;
+        });
+        
+        console.log('🚫 Right-click context menu disabled');
+    }
+    
+    // Disable mouse scroll
+    disableMouseScroll() {
+        document.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            return false;
+        }, { passive: false });
+        
+        // Also disable on canvas specifically
+        this.canvas.addEventListener('wheel', (e) => {
+            e.preventDefault();
+            return false;
+        }, { passive: false });
+        
+        console.log('🚫 Mouse scroll disabled');
     }
     
     // Browser optimizations removed - using default game settings

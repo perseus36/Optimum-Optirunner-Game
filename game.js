@@ -1258,11 +1258,11 @@ class Game {
             document.getElementById('finalScore').textContent = this.score;
             document.getElementById('gameOver').style.display = 'block';
             
-            // Show How to Play button when game ends (even with suspicious score)
-            document.getElementById('howToPlayBtn').style.display = 'block';
+            // Hide How to Play button when game ends (even with suspicious score)
+            document.getElementById('howToPlayBtn').style.display = 'none';
             
-            // Show Tournament button when game ends (even with suspicious score)
-            document.getElementById('tournamentBtn').style.display = 'block';
+            // Hide Tournament button when game ends (even with suspicious score)
+            document.getElementById('tournamentBtn').style.display = 'none';
             
             // Show legacy notice when game ends (even with suspicious score)
             this.showLegacyNotice();
@@ -1277,11 +1277,11 @@ class Game {
         document.getElementById('finalScore').textContent = this.score;
         document.getElementById('gameOver').style.display = 'block';
         
-        // Show How to Play button when game ends
-        document.getElementById('howToPlayBtn').style.display = 'block';
+        // Hide How to Play button when game ends
+        document.getElementById('howToPlayBtn').style.display = 'none';
         
-        // Show Tournament button when game ends
-        document.getElementById('tournamentBtn').style.display = 'block';
+        // Hide Tournament button when game ends
+        document.getElementById('tournamentBtn').style.display = 'none';
         
         // Show legacy notice when game ends
         this.showLegacyNotice();

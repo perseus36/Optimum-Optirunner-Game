@@ -1074,7 +1074,7 @@ button:active {
     position: absolute;
     right: 20px;
     top: 50%;
-    transform: translateY(-50%);
+    transform: translateY(-50%) !important;
     width: 60px;
     height: 60px;
     border-radius: 50%;
@@ -1093,14 +1093,14 @@ button:active {
 }
 
 .tournament-btn:hover {
-    transform: translateY(-50%) scale(1.1);
+    transform: translateY(-50%) scale(1.1) !important;
     box-shadow: 0 12px 35px rgba(255, 215, 0, 0.6);
     border-color: #fff;
     background: linear-gradient(135deg, #fff, #ffed4e);
 }
 
 .tournament-btn:active {
-    transform: translateY(-50%) scale(0.95);
+    transform: translateY(-50%) scale(0.95) !important;
     box-shadow: 0 4px 15px rgba(255, 215, 0, 0.4);
 }
 

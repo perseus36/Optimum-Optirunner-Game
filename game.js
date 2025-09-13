@@ -237,6 +237,18 @@ class Game {
         }
     }
     
+    // Show tournament button with proper positioning
+    showTournamentButton() {
+        const tournamentBtn = document.getElementById('tournamentBtn');
+        if (tournamentBtn) {
+            tournamentBtn.style.display = 'block';
+            // Force reset position to ensure it stays centered
+            tournamentBtn.style.transform = 'translateY(-50%)';
+            tournamentBtn.style.right = '20px';
+            tournamentBtn.style.top = '50%';
+        }
+    }
+    
     // Maintenance popup removed
     generateNewCloudSpacing() {
         this.cloudSpacing[0] = Math.floor(Math.random() * (400 - 100 + 1)) + 100; // Random between 100-400
@@ -736,7 +748,7 @@ class Game {
         document.getElementById('howToPlayBtn').style.display = 'block';
         
         // Show Tournament button when restarting
-        document.getElementById('tournamentBtn').style.display = 'block';
+        this.showTournamentButton();
         
         // Show legacy notice when returning to menu
         this.showLegacyNotice();
@@ -811,7 +823,7 @@ class Game {
         document.getElementById('howToPlayBtn').style.display = 'block';
         
         // Show Tournament button when returning to main menu
-        document.getElementById('tournamentBtn').style.display = 'block';
+        this.showTournamentButton();
         
         // Show legacy notice when returning to main menu
         this.showLegacyNotice();

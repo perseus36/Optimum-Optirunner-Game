@@ -1075,8 +1075,8 @@ button:active {
     right: 20px;
     top: 50%;
     transform: translateY(-50%) !important;
-    width: 60px;
-    height: 60px;
+    width: 90px;
+    height: 90px;
     border-radius: 0;
     background: transparent;
     border: none;
@@ -1085,21 +1085,21 @@ button:active {
     cursor: pointer;
     transition: all 0.3s ease;
     z-index: 1100;
-    box-shadow: 0 0 20px rgba(255, 215, 0, 0.6), 0 0 40px rgba(255, 215, 0, 0.4);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 0;
+    filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 45px rgba(255, 215, 0, 0.4));
 }
 
 .tournament-btn:hover {
     transform: translateY(-50%) scale(1.1) !important;
-    box-shadow: 0 0 30px rgba(255, 215, 0, 0.8), 0 0 60px rgba(255, 215, 0, 0.6);
+    filter: drop-shadow(0 0 20px rgba(255, 215, 0, 1)) drop-shadow(0 0 40px rgba(255, 215, 0, 0.8)) drop-shadow(0 0 60px rgba(255, 215, 0, 0.6));
 }
 
 .tournament-btn:active {
     transform: translateY(-50%) scale(0.95) !important;
-    box-shadow: 0 0 15px rgba(255, 215, 0, 0.4), 0 0 30px rgba(255, 215, 0, 0.3);
+    filter: drop-shadow(0 0 10px rgba(255, 215, 0, 0.6)) drop-shadow(0 0 20px rgba(255, 215, 0, 0.4)) drop-shadow(0 0 30px rgba(255, 215, 0, 0.3));
 }
 
 /* Tournament icon styles */
@@ -1107,7 +1107,6 @@ button:active {
     width: 100%;
     height: 100%;
     object-fit: contain;
-    filter: drop-shadow(0 0 5px rgba(255, 215, 0, 0.5));
 }
 
 .market-btn:hover {

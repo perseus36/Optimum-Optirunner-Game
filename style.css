@@ -868,12 +868,15 @@ button:active {
 .tournament-description {
     text-align: left;
     line-height: 1.6;
-    font-size: 1.1rem;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .tournament-description p {
     margin-bottom: 15px;
     color: #f0f0f0;
+    font-size: 1rem;
+    font-weight: 600;
 }
 
 .tournament-description strong {
@@ -893,6 +896,7 @@ button:active {
     margin: 0;
     color: #ffed4e;
     font-size: 1rem;
+    font-weight: 600;
 }
 
 /* How to Play overlay styles */
@@ -1040,14 +1044,14 @@ button:active {
 
 .legacy-score-notice .notice-content p {
     margin: 8px 0;
-    font-size: 14px;
-    font-weight: 500;
+    font-size: 1rem;
+    font-weight: 600;
     color: white;
     line-height: 1.4;
 }
 
 .legacy-score-notice .discord-link {
-    font-size: 16px !important;
+    font-size: 1rem !important;
     font-weight: 600 !important;
     color: #ffffff !important;
     margin-top: 10px !important;

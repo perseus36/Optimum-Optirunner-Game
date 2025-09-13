@@ -291,7 +291,7 @@ body {
     bottom: 1px;
     left: 50%;
     transform: translateX(-50%);
-    z-index: 100;
+    z-index: 1100;
 }
 
 .game-controls p {
@@ -784,7 +784,7 @@ button:active {
     transition: all 0.3s ease;
     backdrop-filter: blur(10px);
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-    z-index: 100;
+    z-index: 1100;
     font-family: 'Comfortaa', sans-serif;
     min-height: auto;
     width: auto;
@@ -1066,7 +1066,7 @@ button:active {
     position: absolute;
     bottom: 20px;
     right: 20px;
-    z-index: 100;
+    z-index: 1100;
 }
 
 #soundToggleBtn {

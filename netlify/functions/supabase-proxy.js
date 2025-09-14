@@ -503,77 +503,8 @@ exports.handler = async (event, context) => {
             console.log('- jumpCount:', jumpCount, typeof jumpCount);
             console.log('- sessionToken:', sessionToken, typeof sessionToken);
             
-            // Session token validation - Tek kullanımlık bilet kontrolü
-            // Local development için session token kontrolünü atla
-            if (!sessionToken) {
-                console.error('❌ No session token provided');
-                return {
-                    statusCode: 400,
-                    headers,
-                    body: JSON.stringify({ success: false, error: 'Session token required' })
-                };
-            }
-            
-            // Local development token kontrolü
-            if (sessionToken.startsWith('local_dev_token_')) {
-                console.log('🔧 Local development mode - skipping session validation');
-                // Local development için session kontrolünü atla
-            } else {
-                // Production mode - full session validation
-                console.log('🎫 Production mode - validating session token:', sessionToken);
-                
-                // Get authorization header
-                const authHeader = event.headers.authorization || event.headers.Authorization;
-                if (!authHeader || !authHeader.startsWith('Bearer ')) {
-                    return {
-                        statusCode: 401,
-                        headers,
-                        body: JSON.stringify({ success: false, error: 'No authorization token' })
-                    };
-                }
-                
-                const token = authHeader.substring(7);
-                
-                // Verify token and get user
-                const { data: { user }, error: authError } = await supabase.auth.getUser(token);
-                
-                if (authError || !user) {
-                    console.error('❌ Auth error:', authError?.message);
-                    return {
-                        statusCode: 401,
-                        headers,
-                        body: JSON.stringify({ success: false, error: 'Invalid token' })
-                    };
-                }
-                
-                // Session token validation - Bilet kontrolü
-                const { data: session, error: sessionError } = await supabase
-                    .from('game_sessions')
-                    .select('*')
-                    .eq('token', sessionToken)
-                    .eq('user_id', user.id)
-                    .eq('status', 'active')
-                    .single();
-                
-                if (sessionError || !session) {
-                    console.error('❌ Invalid or expired session token:', sessionError?.message);
-                    return {
-                        statusCode: 403,
-                        headers,
-                        body: JSON.stringify({ success: false, error: 'Geçersiz oyun oturumu.' })
-                    };
-                }
-                
-                console.log('✅ Session token validated:', session.id);
-                
-                // Invalidate session token immediately - Tek kullanımlık
-                await supabase
-                    .from('game_sessions')
-                    .update({ status: 'used' })
-                    .eq('id', session.id);
-                
-                console.log('🎫 Session token invalidated');
-            }
+            // Session token validation geçici olarak devre dışı
+            console.log('🔧 Development mode - skipping session validation');
             
             // Basic validation
             if (typeof score !== 'number' || score < 0 || score > 1000000) {

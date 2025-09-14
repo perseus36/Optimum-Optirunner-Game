@@ -254,9 +254,29 @@ class Game {
         // Game loop
         this.gameLoop();
         
-        // Güvenlik: Oyun nesnesini dondur - hile yapmayı engelle
-        Object.freeze(this);
-        console.log('🔒 Game object frozen for security');
+        // Güvenlik: Sadece kritik fonksiyonları koru - state değişikliklerine izin ver
+        this.protectCriticalFunctions();
+        console.log('🔒 Critical functions protected for security');
+    }
+    
+    // Kritik fonksiyonları koruma - Object.freeze yerine seçici koruma
+    protectCriticalFunctions() {
+        // Sadece çarpışma kontrolü ve skor fonksiyonlarını koru
+        const criticalFunctions = [
+            'checkObstacleCollision',
+            'checkBonusCollision', 
+            'validateScore',
+            'endGame',
+            'updatePlayer',
+            'updateObstacles',
+            'updateBonuses'
+        ];
+        
+        criticalFunctions.forEach(funcName => {
+            if (this[funcName] && typeof this[funcName] === 'function') {
+                Object.freeze(this[funcName]);
+            }
+        });
     }
     
     // Check if legacy notice should be shown

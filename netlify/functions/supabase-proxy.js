@@ -1,6 +1,46 @@
 // netlify/functions/supabase-proxy.js - Ana Proxy Function
 const { createClient } = require('@supabase/supabase-js');
 
+// Score validation function - "Sahtekarlık dedektörü"
+const isScoreValid = (score, gameDuration, optiEarned, jumpCount) => {
+  // Oyun süresi milisaniye cinsinden gelir, saniyeye çevirelim.
+  const durationInSeconds = gameDuration / 1000;
+
+  // 1. Kural: Oyun en az 5 saniye sürmüş olmalı.
+  if (durationInSeconds < 5) {
+    console.warn(`[Hile Tespiti] Geçersiz skor: Oyun süresi çok kısa (${durationInSeconds}s). Skor: ${score}`);
+    return false;
+  }
+
+  // 2. Kural: Süreye göre maksimum bir skor belirleyelim.
+  // Bir oyuncu saniyede ortalama 2 puandan fazla kazanamaz varsayalım (hızlanmayı da hesaba katarak).
+  // +10 puan da olası bonuslar için pay bırakalım.
+  const maxPossibleScore = (durationInSeconds * 2) + 10;
+  if (score > maxPossibleScore) {
+    console.warn(`[Hile Tespiti] Geçersiz skor: Skor (${score}), oyun süresi için (${durationInSeconds}s) çok yüksek. İzin verilen en yüksek: ${maxPossibleScore}`);
+    return false;
+  }
+
+  // 3. Kural: Kazanılan $OPTI puanını kontrol edelim.
+  // Oyunda bonuslar yaklaşık 5 saniyede bir çıkar.
+  const maxPossibleOpti = Math.floor(durationInSeconds / 5) + 2; // +2 pay
+  if (optiEarned > maxPossibleOpti) {
+    console.warn(`[Hile Tespiti] Geçersiz $OPTI: Kazanılan $OPTI (${optiEarned}), süre için (${durationInSeconds}s) çok yüksek.`);
+    return false;
+  }
+
+  // 4. Kural: Zıplama sayısını kontrol edelim.
+  // Yüksek skor için zıplamak şart. Her 4 puan için en az 1 zıplama gerekir gibi bir kural koyalım.
+  if (score > 20 && jumpCount < score / 4) {
+    console.warn(`[Hile Tespiti] Tutarsızlık: Skor (${score}) ve zıplama sayısı (${jumpCount}) uyumsuz.`);
+    return false;
+  }
+
+  // Bütün kontrollerden geçtiyse, skor geçerlidir.
+  console.log(`[Skor Doğrulandı] Süre: ${durationInSeconds}s, Skor: ${score}, $OPTI: ${optiEarned}, Zıplama: ${jumpCount}`);
+  return true;
+};
+
 exports.handler = async (event, context) => {
     // CORS headers
     const headers = {
@@ -404,6 +444,18 @@ exports.handler = async (event, context) => {
                     statusCode: 400,
                     headers,
                     body: JSON.stringify({ success: false, error: 'Invalid score' })
+                };
+            }
+            
+            // ---- İŞTE EN ÖNEMLİ KISIM BURASI ----
+            // Gelen skoru "sahtekarlık dedektörümüzden" geçiriyoruz.
+            if (!isScoreValid(score, gameDuration, optiEarned, jumpCount)) {
+                // Eğer skor geçerli değilse, hatayla geri dön ve işlemi durdur.
+                console.error('❌ Score validation failed - invalid score data');
+                return {
+                    statusCode: 400, // Bad Request (Hatalı İstek)
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Geçersiz skor verisi.' })
                 };
             }
             

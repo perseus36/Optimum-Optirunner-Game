@@ -73,6 +73,7 @@ class Game {
         this.gameEndTime = null;
         this.jumpCount = 0;
         this.totalGameTime = 0;
+        this.lastTime = 0; // Delta time için
 
         this.username = localStorage.getItem('username') || '';
         this.leaderboardVisible = false;
@@ -926,10 +927,13 @@ class Game {
         }
     }
     
-    updatePlayer() {
+    updatePlayer(deltaTime) {
+        // Calculate game speed multiplier based on delta time
+        const gameSpeed = deltaTime / 16.67; // 60 FPS'e göre hız oranı
+        
         // Apply gravity
-        this.player.velocityY += this.player.gravity;
-        this.player.y += this.player.velocityY;
+        this.player.velocityY += this.player.gravity * gameSpeed;
+        this.player.y += this.player.velocityY * gameSpeed;
         
         // Ground check
         if (this.player.y >= this.ground - this.player.height) {
@@ -1106,12 +1110,15 @@ class Game {
         }
     }
     
-    updateObstacles() {
+    updateObstacles(deltaTime) {
+        // Calculate game speed multiplier based on delta time
+        const gameSpeed = deltaTime / 16.67; // 60 FPS'e göre hız oranı
+        
         for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obstacle = this.obstacles[i];
             
             // Move obstacle to the left with dynamic speed
-            obstacle.x -= this.obstacleSpeed * this.currentObstacleSpeedMultiplier;
+            obstacle.x -= (this.obstacleSpeed * this.currentObstacleSpeedMultiplier) * gameSpeed;
             
             // Check if giant obstacle should activate (when 200 frames away from player)
             if (obstacle.isGiant && !obstacle.giantActivated) {
@@ -1159,7 +1166,7 @@ class Game {
         
         // Update optimum logo position (move with obstacles)
         if (this.optimumLogo && this.optimumLogo.visible) {
-            this.optimumLogo.x -= this.obstacleSpeed * this.currentObstacleSpeedMultiplier;
+            this.optimumLogo.x -= (this.obstacleSpeed * this.currentObstacleSpeedMultiplier) * gameSpeed;
             
             // Calculate actual logo width in pixels
             const actualLogoWidth = this.optimumLogo.width * this.optimumSprite.naturalWidth;
@@ -1171,12 +1178,15 @@ class Game {
         }
     }
     
-    updateBonuses() {
+    updateBonuses(deltaTime) {
+        // Calculate game speed multiplier based on delta time
+        const gameSpeed = deltaTime / 16.67; // 60 FPS'e göre hız oranı
+        
         for (let i = this.bonuses.length - 1; i >= 0; i--) {
             const bonus = this.bonuses[i];
             
             // Move bonus to the left with dynamic speed
-            bonus.x -= this.obstacleSpeed * this.currentObstacleSpeedMultiplier;
+            bonus.x -= (this.obstacleSpeed * this.currentObstacleSpeedMultiplier) * gameSpeed;
             
             // Remove bonuses that exit the screen
             if (bonus.x + bonus.width < 0) {
@@ -1837,22 +1847,22 @@ class Game {
     
     // updateAnimation function removed - GIF automatically animates
     
-    update() {
+    update(deltaTime) {
         if (this.gameRunning && !this.gameOver && !this.gamePaused) {
-            this.updatePlayer();
+            this.updatePlayer(deltaTime);
             this.updateObstacleSpeed();
             this.spawnObstacle();
             this.spawnBonus();
-            this.updateObstacles();
-            this.updateBonuses();
+            this.updateObstacles(deltaTime);
+            this.updateBonuses(deltaTime);
             this.updateClouds(); // Add cloud animation
             this.frameCount++;
             
             // Sprite animation update
             this.updateSpriteAnimation();
             
-            // Update game time
-            this.totalGameTime += 16.67; // Approximate 60 FPS
+            // Update game time with real delta time
+            this.totalGameTime += deltaTime;
         }
     }
     
@@ -3351,10 +3361,13 @@ class Game {
     
     // Browser optimizations removed - using default game settings
     
-    gameLoop() {
-        this.update();
+    gameLoop(timestamp = 0) {
+        const deltaTime = timestamp - this.lastTime;
+        this.lastTime = timestamp;
+
+        this.update(deltaTime);
         this.draw();
-        requestAnimationFrame(() => this.gameLoop());
+        requestAnimationFrame((t) => this.gameLoop(t));
     }
 }
 

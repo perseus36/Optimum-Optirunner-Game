@@ -253,6 +253,10 @@ class Game {
         
         // Game loop
         this.gameLoop();
+        
+        // Güvenlik: Oyun nesnesini dondur - hile yapmayı engelle
+        Object.freeze(this);
+        console.log('🔒 Game object frozen for security');
     }
     
     // Check if legacy notice should be shown
@@ -1374,34 +1378,70 @@ class Game {
         this.updateUI();
     }
     
-    // Simplified anti-cheat validation - only 2 criteria
+    // Güçlendirilmiş anti-cheat validation - çoklu katman koruma
     validateScore(score) {
         const gameTimeSeconds = this.totalGameTime / 1000;
         
-        console.log('Anti-cheat validation:');
+        console.log('🔍 Anti-cheat validation:');
         console.log('- Game time:', gameTimeSeconds.toFixed(2), 'seconds');
         console.log('- Score:', score);
+        console.log('- Jump count:', this.jumpCount);
+        console.log('- Bonus count:', this.bonusCount);
         
-        // Strict checks to prevent manual score injection
+        // Katman 1: Temel kontroller
         const suspiciousChecks = [];
         
-        // Check 1: High score in first 10 seconds (more than 50 points)
+        // Check 1: Çok yüksek skor ilk 10 saniyede (50'den fazla)
         if (gameTimeSeconds <= 10 && score > 50) {
-            suspiciousChecks.push(`High score in first 10 seconds: ${score} points in ${gameTimeSeconds.toFixed(2)}s`);
+            suspiciousChecks.push(`🚨 Çok yüksek skor ilk 10 saniyede: ${score} puan`);
         }
         
-        // Check 2: Impossible high score (500 or more points)
+        // Check 2: Çok yüksek skor ilk 30 saniyede (150'den fazla)
+        if (gameTimeSeconds <= 30 && score > 150) {
+            suspiciousChecks.push(`🚨 Çok yüksek skor ilk 30 saniyede: ${score} puan`);
+        }
+        
+        // Check 3: Saniyede 2 puandan fazla (imkansız)
+        const scorePerSecond = score / gameTimeSeconds;
+        if (scorePerSecond > 2) {
+            suspiciousChecks.push(`🚨 İmkansız skor hızı: ${scorePerSecond.toFixed(2)} puan/saniye`);
+        }
+        
+        // Check 4: Çok az zıplama ile yüksek skor
+        const scorePerJump = this.jumpCount > 0 ? score / this.jumpCount : 0;
+        if (this.jumpCount < 10 && score > 100) {
+            suspiciousChecks.push(`🚨 Çok az zıplama ile yüksek skor: ${this.jumpCount} zıplama, ${score} puan`);
+        }
+        
+        // Check 5: Çok yüksek zıplama başına skor
+        if (scorePerJump > 20) {
+            suspiciousChecks.push(`🚨 Çok yüksek zıplama başına skor: ${scorePerJump.toFixed(2)} puan/zıplama`);
+        }
+        
+        // Check 6: Oyun süresi çok kısa ama yüksek skor
+        if (gameTimeSeconds < 5 && score > 20) {
+            suspiciousChecks.push(`🚨 Çok kısa sürede yüksek skor: ${gameTimeSeconds}s, ${score} puan`);
+        }
+        
+        // Check 7: Bonus sayısı ile skor uyumsuzluğu
+        const expectedBonusScore = this.bonusCount * 10; // Her bonus 10 puan
+        if (score > expectedBonusScore + 50) { // 50 puan tolerans
+            suspiciousChecks.push(`🚨 Bonus sayısı ile skor uyumsuz: ${this.bonusCount} bonus, ${score} puan`);
+        }
+        
+        // Check 8: İmkansız yüksek skor (500'den fazla)
         if (score >= 500) {
-            suspiciousChecks.push(`Impossible high score: ${score} points (max possible: 499)`);
+            suspiciousChecks.push(`🚨 İmkansız yüksek skor: ${score} puan (maksimum: 499)`);
         }
         
+        // Sonuç değerlendirme
         if (suspiciousChecks.length > 0) {
-            console.warn('🚨 Suspicious activity detected - SCORE REJECTED:');
+            console.warn('🚫 Şüpheli skor tespit edildi:');
             suspiciousChecks.forEach(check => console.warn(`  - ${check}`));
             return false;
         }
         
-        console.log('✅ Score validation passed');
+        console.log('✅ Skor doğrulandı - güvenli');
         return true;
     }
     
@@ -3402,12 +3442,12 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wait for Supabase to be ready
     if (window.supabaseReady) {
         console.log('✅ Supabase ready, initializing game...');
-        window.game = new Game();
+        new Game(); // Global erişim kaldırıldı - güvenlik için
     } else {
         console.log('⏳ Waiting for Supabase...');
         window.addEventListener('supabaseReady', () => {
             console.log('✅ Supabase ready event received, initializing game...');
-            window.game = new Game();
+            new Game(); // Global erişim kaldırıldı - güvenlik için
         });
     }
 });

@@ -1694,3 +1694,207 @@ button:active {
 .game-start-overlay button:disabled::after {
     display: none !important;
 }
+
+/* Tournament Ending Popup Styles */
+.tournament-ending-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(135deg, rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.95));
+    backdrop-filter: blur(15px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 0;
+    z-index: 2000;
+    animation: fadeIn 0.8s ease-out;
+}
+
+.tournament-ending-content {
+    text-align: center;
+    color: white;
+    padding: 60px;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+    border-radius: 25px;
+    border: 2px solid rgba(255, 215, 0, 0.3);
+    backdrop-filter: blur(20px);
+    box-shadow: 0 30px 60px rgba(0, 0, 0, 0.5), 0 0 50px rgba(255, 215, 0, 0.1);
+    transform: translateY(0);
+    transition: all 0.3s ease;
+    animation: slideUp 0.8s ease-out;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
+    min-width: 500px;
+    max-width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    position: relative;
+}
+
+.tournament-ending-content:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 40px 80px rgba(0, 0, 0, 0.6), 0 0 60px rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.5);
+}
+
+.tournament-ending-content h2 {
+    font-size: 2.8rem;
+    margin-bottom: 20px;
+    text-shadow: 0 4px 12px rgba(0, 0, 0, 0.6);
+    background: linear-gradient(45deg, #ffd700, #ffed4e, #ffd700);
+    background-size: 200% 200%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    animation: gradientShift 3s ease-in-out infinite;
+    font-weight: 800;
+    letter-spacing: 2px;
+    font-family: 'Black Ops One', cursive;
+}
+
+.tournament-ending-message {
+    text-align: left;
+    line-height: 1.8;
+    font-size: 1.1rem;
+    font-weight: 500;
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+.tournament-ending-message p {
+    margin-bottom: 20px;
+    color: #f0f0f0;
+    font-size: 1.1rem;
+    font-weight: 500;
+    text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+}
+
+.tournament-ending-message p:last-child {
+    margin-bottom: 0;
+    font-style: italic;
+    color: #ffd700;
+    font-weight: 600;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.social-buttons {
+    display: flex;
+    gap: 20px;
+    justify-content: center;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+.social-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 15px 30px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    border-radius: 30px;
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    text-decoration: none;
+    position: relative;
+    overflow: hidden;
+    letter-spacing: 1px;
+    border: 2px solid transparent;
+    min-width: 200px;
+    backdrop-filter: blur(10px);
+}
+
+.social-btn::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+    transition: left 0.6s ease-out;
+}
+
+.social-btn:hover::before {
+    left: 100%;
+}
+
+.twitter-btn {
+    background: linear-gradient(135deg, #1da1f2, #0d8bd9);
+    color: white;
+}
+
+.twitter-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(29, 161, 242, 0.4);
+    background: linear-gradient(135deg, #42b3f5, #1da1f2);
+}
+
+.discord-btn {
+    background: linear-gradient(135deg, #5865f2, #4752c4);
+    color: white;
+}
+
+.discord-btn:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(88, 101, 242, 0.4);
+    background: linear-gradient(135deg, #6b73ff, #5865f2);
+}
+
+.social-btn:active {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    transition: all 0.1s ease;
+}
+
+.social-btn svg {
+    flex-shrink: 0;
+    transition: transform 0.3s ease;
+}
+
+.social-btn:hover svg {
+    transform: scale(1.1);
+}
+
+/* Responsive Design for Tournament Ending Popup */
+@media (max-width: 768px) {
+    .tournament-ending-content {
+        padding: 40px 30px;
+        min-width: 90%;
+        max-width: 95%;
+        margin: 20px;
+    }
+    
+    .tournament-ending-content h2 {
+        font-size: 2.2rem;
+        letter-spacing: 1px;
+    }
+    
+    .tournament-ending-message {
+        font-size: 1rem;
+    }
+    
+    .tournament-ending-message p {
+        font-size: 1rem;
+    }
+    
+    .social-buttons {
+        flex-direction: column;
+        gap: 15px;
+        width: 100%;
+    }
+    
+    .social-btn {
+        width: 100%;
+        max-width: 280px;
+        padding: 12px 25px;
+        font-size: 1rem;
+    }
+}

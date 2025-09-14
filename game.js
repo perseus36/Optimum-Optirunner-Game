@@ -250,6 +250,9 @@ class Game {
         // Check if legacy notice should be shown
         this.checkLegacyNotice();
         
+        // Show tournament ending popup (blocks game access)
+        this.showTournamentEndingPopup();
+        
         // Maintenance popup removed
         
         // Game loop
@@ -306,6 +309,19 @@ class Game {
         const notice = document.getElementById('legacyScoreNotice');
         if (notice) {
             notice.style.display = 'none';
+        }
+    }
+    
+    // Show tournament ending popup (blocks game access)
+    showTournamentEndingPopup() {
+        const popup = document.getElementById('tournamentEndingOverlay');
+        if (popup) {
+            popup.style.display = 'flex';
+            // Hide the start overlay to prevent access to game controls
+            document.getElementById('gameStartOverlay').style.display = 'none';
+            // Hide other UI elements
+            document.getElementById('howToPlayBtn').style.display = 'none';
+            document.getElementById('tournamentBtn').style.display = 'none';
         }
     }
     
@@ -450,8 +466,14 @@ class Game {
         this.disableContextMenu();
         this.disableMouseScroll();
         
-        // Jumping with Space key
+        // Jumping with Space key (disabled during tournament ending)
         document.addEventListener('keydown', (e) => {
+            // Tournament has ended - prevent all game interactions
+            const tournamentPopup = document.getElementById('tournamentEndingOverlay');
+            if (tournamentPopup && tournamentPopup.style.display === 'flex') {
+                return; // Block all game interactions
+            }
+            
             if (e.code === 'Space' && this.gameRunning && !this.gameOver && !this.gamePaused) {
                 e.preventDefault();
                 this.jump();
@@ -470,11 +492,8 @@ class Game {
         if (startBtn) {
             startBtn.addEventListener('click', () => {
                 console.log('Start button clicked');
-                if (window.authFunctions && window.authFunctions.isSignedIn()) {
-                    this.startGame();
-                } else {
-                    alert('Please sign in with Google to play the game!');
-                }
+                // Tournament has ended - show popup instead of starting game
+                this.showTournamentEndingPopup();
             });
         }
         
@@ -548,7 +567,8 @@ class Game {
         const playAgainBtn = document.getElementById('playAgainBtn');
         if (playAgainBtn) {
             playAgainBtn.addEventListener('click', () => {
-                this.restartGame();
+                // Tournament has ended - show popup instead of restarting
+                this.showTournamentEndingPopup();
             });
         }
         
@@ -556,7 +576,8 @@ class Game {
         const mainMenuBtnGameOver = document.getElementById('mainMenuBtnGameOver');
         if (mainMenuBtnGameOver) {
             mainMenuBtnGameOver.addEventListener('click', () => {
-                this.returnToMainMenu();
+                // Tournament has ended - show popup instead of returning to main menu
+                this.showTournamentEndingPopup();
             });
         }
         
@@ -564,19 +585,27 @@ class Game {
         const continueBtn = document.getElementById('continueBtn');
         if (continueBtn) {
             continueBtn.addEventListener('click', () => {
-                this.togglePause();
+                // Tournament has ended - show popup instead of continuing
+                this.showTournamentEndingPopup();
             });
         }
         
         const mainMenuBtn = document.getElementById('mainMenuBtn');
         if (mainMenuBtn) {
             mainMenuBtn.addEventListener('click', () => {
-                this.returnToMainMenu();
+                // Tournament has ended - show popup instead of returning to main menu
+                this.showTournamentEndingPopup();
             });
         }
         
-        // Touch support (for mobile)
+        // Touch support (for mobile) - disabled during tournament ending
         this.canvas.addEventListener('touchstart', (e) => {
+            // Tournament has ended - prevent all game interactions
+            const tournamentPopup = document.getElementById('tournamentEndingOverlay');
+            if (tournamentPopup && tournamentPopup.style.display === 'flex') {
+                return; // Block all game interactions
+            }
+            
             if (this.gameRunning && !this.gameOver && !this.gamePaused) {
                 e.preventDefault();
                 this.jump();

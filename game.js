@@ -745,7 +745,9 @@ class Game {
         this.obstacles = [];
         this.bonuses = [];
         this.frameCount = 0;
-        this.lastObstacleSpawnFrame = 0; // Reset obstacle spawn system
+        this.lastObstacleSpawnTime = 0; // Reset obstacle spawn system (delta time)
+        this.lastBonusSpawnTime = 0; // Reset bonus spawn system (delta time)
+        this.lastAnimationTime = 0; // Reset animation system (delta time)
         this.optimumLogo = null; // Reset optimum logo
         this.obstacleCount = 0; // Reset obstacle counter for giant system
         this.currentGroupGiantPosition = 0; // Reset giant position for new group
@@ -753,7 +755,9 @@ class Game {
         // Reset obstacle speed system
         this.obstacleSpawnRate = this.baseObstacleSpawnRate;
         this.currentObstacleSpeedMultiplier = 1;
-        this.gameStartTime = this.totalGameTime; // Record when game started
+        this.lastTime = 0; // Reset delta time system
+        this.gameStartTime = 0; // Record when game started (delta time)
+        this.totalGameTime = 0; // Reset total game time (delta time)
         this.speedIncreaseStarted = false; // Reset speed increase flag
         
         // Reset player jump mechanics to base values
@@ -841,7 +845,9 @@ class Game {
         this.obstacles = [];
         this.bonuses = [];
         this.frameCount = 0;
-        this.lastObstacleSpawnFrame = 0;
+        this.lastObstacleSpawnTime = 0; // Reset obstacle spawn system (delta time)
+        this.lastBonusSpawnTime = 0; // Reset bonus spawn system (delta time)
+        this.lastAnimationTime = 0; // Reset animation system (delta time)
         this.optimumLogo = null; // Reset optimum logo
         this.obstacleCount = 0; // Reset obstacle counter for giant system
         this.currentGroupGiantPosition = 0; // Reset giant position for new group
@@ -849,7 +855,9 @@ class Game {
         // Reset obstacle speed system
         this.obstacleSpawnRate = this.baseObstacleSpawnRate;
         this.currentObstacleSpeedMultiplier = 1;
+        this.lastTime = 0; // Reset delta time system
         this.gameStartTime = 0;
+        this.totalGameTime = 0; // Reset total game time (delta time)
         this.speedIncreaseStarted = false;
         
         // Reset player jump mechanics to base values

@@ -107,8 +107,9 @@ class Game {
         
         // Sprite animation system
         this.currentSprite = 0; // 0: sprite1, 1: sprite2
-        this.animationSpeed = 20; // Sprite changes every 20 frames (slower)
+        this.animationSpeed = 500; // Sprite changes every 500ms (half second)
         this.animationCounter = 0;
+        this.lastAnimationTime = 0; // Time when last animation changed
         
         // Indicate when sprites are loaded and ready
         this.sprite1.onload = () => {
@@ -123,14 +124,14 @@ class Game {
         // Obstacles
         this.obstacles = [];
         this.obstacleSpeed = 3;
-        this.obstacleSpawnRate = 120; // Spawn obstacle every 120 frames
-        this.baseObstacleSpawnRate = 120; // Base spawn rate to calculate increases
-        this.obstacleSpeedIncreaseInterval = 600; // 10 seconds (60 FPS * 10)
+        this.obstacleSpawnRate = 2000; // Spawn obstacle every 2000ms (2 seconds)
+        this.baseObstacleSpawnRate = 2000; // Base spawn rate in milliseconds
+        this.obstacleSpeedIncreaseInterval = 10000; // 10 seconds in milliseconds
         this.obstacleSpeedIncreaseAmount = 0.20; // 20% increase every 10 seconds
         this.currentObstacleSpeedMultiplier = 1; // Current speed multiplier
         this.frameCount = 0;
-        this.lastObstacleSpawnFrame = 0; // Frame when last obstacle spawned
-        this.gameStartFrame = 0; // Frame when game started
+        this.lastObstacleSpawnTime = 0; // Time when last obstacle spawned
+        this.gameStartTime = 0; // Time when game started
         this.speedIncreaseStarted = false; // Whether speed increase has started
         
         // Browser performance detection
@@ -170,7 +171,8 @@ class Game {
         
         // Bonus system
         this.bonuses = [];
-        this.bonusSpawnRate = 300; // Spawn bonus every 300 frames (approximately 5 seconds)
+        this.bonusSpawnRate = 3000; // Spawn bonus every 3000ms (3 seconds)
+        this.lastBonusSpawnTime = 0; // Time when last bonus spawned
         this.bonusSprite = new Image();
         this.bonusSprite.src = 'assets/sprites/bonus.webp';
         
@@ -751,7 +753,7 @@ class Game {
         // Reset obstacle speed system
         this.obstacleSpawnRate = this.baseObstacleSpawnRate;
         this.currentObstacleSpeedMultiplier = 1;
-        this.gameStartFrame = this.frameCount; // Record when game started
+        this.gameStartTime = this.totalGameTime; // Record when game started
         this.speedIncreaseStarted = false; // Reset speed increase flag
         
         // Reset player jump mechanics to base values
@@ -847,7 +849,7 @@ class Game {
         // Reset obstacle speed system
         this.obstacleSpawnRate = this.baseObstacleSpawnRate;
         this.currentObstacleSpeedMultiplier = 1;
-        this.gameStartFrame = 0;
+        this.gameStartTime = 0;
         this.speedIncreaseStarted = false;
         
         // Reset player jump mechanics to base values
@@ -943,25 +945,25 @@ class Game {
         }
     }
     
-    updateObstacleSpeed() {
+    updateObstacleSpeed(deltaTime) {
         // Check if 10 seconds have passed since game start
-        const framesSinceGameStart = this.frameCount - this.gameStartFrame;
-        const tenSecondsInFrames = 600; // 10 seconds * 60 FPS
+        const timeSinceGameStart = this.totalGameTime - this.gameStartTime;
+        const tenSecondsInMs = 10000; // 10 seconds in milliseconds
         
         // Start speed increase after 10 seconds
-        if (framesSinceGameStart >= tenSecondsInFrames && !this.speedIncreaseStarted) {
+        if (timeSinceGameStart >= tenSecondsInMs && !this.speedIncreaseStarted) {
             this.speedIncreaseStarted = true;
             console.log('Speed increase system activated after 10 seconds!');
         }
         
         // Only increase speed if system is activated and every 10 seconds
         if (this.speedIncreaseStarted && 
-            framesSinceGameStart % this.obstacleSpeedIncreaseInterval === 0) {
+            Math.floor(timeSinceGameStart / this.obstacleSpeedIncreaseInterval) > 
+            Math.floor((timeSinceGameStart - deltaTime) / this.obstacleSpeedIncreaseInterval)) {
             
             this.currentObstacleSpeedMultiplier += this.obstacleSpeedIncreaseAmount;
             
-            // Calculate new spawn rate (faster spawn = lower frame count)
-            // Remove the minimum limit to allow unlimited speed increases
+            // Calculate new spawn rate (faster spawn = lower time)
             this.obstacleSpawnRate = Math.floor(this.baseObstacleSpawnRate / this.currentObstacleSpeedMultiplier);
             
             // Adjust player jump mechanics to maintain challenge as speed increases
@@ -1038,18 +1040,18 @@ class Game {
 
     
     spawnObstacle() {
-        // Current fixed distance: 120 frames
+        // Current fixed distance: 2000ms (2 seconds)
         // Random distance: between 20% shorter and 25% longer
-        const minDistance = Math.floor(this.obstacleSpawnRate * 0.8); // 20% shorter (96 frames)
-        const maxDistance = Math.floor(this.obstacleSpawnRate * 1.25); // 25% longer (150 frames)
+        const minDistance = Math.floor(this.obstacleSpawnRate * 0.8); // 20% shorter (1600ms)
+        const maxDistance = Math.floor(this.obstacleSpawnRate * 1.25); // 25% longer (2500ms)
         
-        // Number of frames since last obstacle
-        const framesSinceLastObstacle = this.frameCount - this.lastObstacleSpawnFrame;
+        // Time since last obstacle
+        const timeSinceLastObstacle = this.totalGameTime - this.lastObstacleSpawnTime;
         
         // Calculate random distance
         const randomDistance = Math.floor(Math.random() * (maxDistance - minDistance + 1)) + minDistance;
         
-        if (framesSinceLastObstacle >= randomDistance) {
+        if (timeSinceLastObstacle >= randomDistance) {
             // Randomly select stone graphic (1 or 2)
             const stoneType = Math.random() < 0.5 ? 1 : 2;
             
@@ -1081,8 +1083,8 @@ class Game {
             };
             this.obstacles.push(obstacle);
             
-            // Update last obstacle spawn frame
-            this.lastObstacleSpawnFrame = this.frameCount;
+            // Update last obstacle spawn time
+            this.lastObstacleSpawnTime = this.totalGameTime;
             
                          // Debug information
              if (shouldBeGiant) {
@@ -1094,7 +1096,10 @@ class Game {
     }
     
     spawnBonus() {
-        if (this.frameCount % this.bonusSpawnRate === 0) {
+        // Time since last bonus
+        const timeSinceLastBonus = this.totalGameTime - this.lastBonusSpawnTime;
+        
+        if (timeSinceLastBonus >= this.bonusSpawnRate) {
             // Set bonus dimensions in original proportions
             const bonusWidth = 40; // Width
             const bonusHeight = 40; // Height (same as width - square format)
@@ -1107,6 +1112,9 @@ class Game {
                 collected: false
             };
             this.bonuses.push(bonus);
+            
+            // Update last bonus spawn time
+            this.lastBonusSpawnTime = this.totalGameTime;
         }
     }
     
@@ -1850,7 +1858,7 @@ class Game {
     update(deltaTime) {
         if (this.gameRunning && !this.gameOver && !this.gamePaused) {
             this.updatePlayer(deltaTime);
-            this.updateObstacleSpeed();
+            this.updateObstacleSpeed(deltaTime);
             this.spawnObstacle();
             this.spawnBonus();
             this.updateObstacles(deltaTime);
@@ -1869,10 +1877,12 @@ class Game {
 
     
     updateSpriteAnimation() {
-        this.animationCounter++;
-        if (this.animationCounter >= this.animationSpeed) {
+        // Time since last animation change
+        const timeSinceLastAnimation = this.totalGameTime - this.lastAnimationTime;
+        
+        if (timeSinceLastAnimation >= this.animationSpeed) {
             this.currentSprite = (this.currentSprite + 1) % 2; // Changes between 0 and 1
-            this.animationCounter = 0;
+            this.lastAnimationTime = this.totalGameTime;
         }
     }
     

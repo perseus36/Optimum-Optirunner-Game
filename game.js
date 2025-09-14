@@ -740,16 +740,22 @@ class Game {
             return;
         }
         
-        // Sunucudan yeni oyun bileti iste
-        try {
-            console.log('🎫 Requesting new game session token...');
-            this.currentGameSessionToken = await window.authFunctions.startNewGameSession();
-            console.log('✅ New game session token received:', this.currentGameSessionToken);
-        } catch (error) {
-            console.error('❌ Failed to get game session token:', error);
-            alert('Sunucuyla bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
-            this.gameRunning = false; // Oyunu durdur
-            return;
+        // Sunucudan yeni oyun bileti iste (sadece production'da)
+        if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+            try {
+                console.log('🎫 Requesting new game session token...');
+                this.currentGameSessionToken = await window.authFunctions.startNewGameSession();
+                console.log('✅ New game session token received:', this.currentGameSessionToken);
+            } catch (error) {
+                console.error('❌ Failed to get game session token:', error);
+                alert('Sunucuyla bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
+                this.gameRunning = false; // Oyunu durdur
+                return;
+            }
+        } else {
+            // Local development için dummy token
+            this.currentGameSessionToken = 'local_dev_token_' + Date.now();
+            console.log('🔧 Local development mode - using dummy session token:', this.currentGameSessionToken);
         }
         
         // Get username from user profile
@@ -2305,7 +2311,7 @@ class Game {
                     optiEarned, 
                     this.totalGameTime, 
                     this.jumpCount,
-                    this.currentGameSessionToken // Tek kullanımlık oyun bileti
+                    this.currentGameSessionToken // Tek kullanımlık oyun bileti (local'de dummy)
                 );
                 
                 if (leaderboardResult.success) {

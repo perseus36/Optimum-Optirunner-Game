@@ -46,7 +46,21 @@ CREATE TABLE IF NOT EXISTS weekly_scores (
     UNIQUE(user_id, week_start)
 );
 
--- 4. LEADERBOARD TABLOSU (Skorlar) - DEPRECATED
+-- 4. GAME_SESSIONS TABLOSU (Tek Kullanımlık Oyun Biletleri)
+CREATE TABLE IF NOT EXISTS game_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+    token TEXT NOT NULL UNIQUE,
+    status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'used', 'expired')),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    expires_at TIMESTAMP WITH TIME ZONE DEFAULT (NOW() + INTERVAL '1 hour')
+);
+
+-- Index for faster lookups
+CREATE INDEX IF NOT EXISTS idx_game_sessions_token ON game_sessions(token);
+CREATE INDEX IF NOT EXISTS idx_game_sessions_user_status ON game_sessions(user_id, status);
+
+-- 5. LEADERBOARD TABLOSU (Skorlar) - DEPRECATED
 CREATE TABLE IF NOT EXISTS leaderboard (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
@@ -136,6 +150,24 @@ CREATE POLICY "Anyone can view leaderboard" ON leaderboard
 DROP POLICY IF EXISTS "Users can insert own scores" ON leaderboard;
 CREATE POLICY "Users can insert own scores" ON leaderboard
     FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Game_sessions tablosu için RLS
+ALTER TABLE game_sessions ENABLE ROW LEVEL SECURITY;
+
+-- Kullanıcılar sadece kendi session'larını görebilir
+DROP POLICY IF EXISTS "Users can view own sessions" ON game_sessions;
+CREATE POLICY "Users can view own sessions" ON game_sessions
+    FOR SELECT USING (auth.uid() = user_id);
+
+-- Kullanıcılar sadece kendi session'larını oluşturabilir
+DROP POLICY IF EXISTS "Users can insert own sessions" ON game_sessions;
+CREATE POLICY "Users can insert own sessions" ON game_sessions
+    FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- Kullanıcılar sadece kendi session'larını güncelleyebilir
+DROP POLICY IF EXISTS "Users can update own sessions" ON game_sessions;
+CREATE POLICY "Users can update own sessions" ON game_sessions
+    FOR UPDATE USING (auth.uid() = user_id);
 
 -- Banned users tablosu için RLS
 ALTER TABLE banned_users ENABLE ROW LEVEL SECURITY;

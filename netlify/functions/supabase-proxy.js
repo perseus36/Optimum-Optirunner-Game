@@ -130,6 +130,70 @@ exports.handler = async (event, context) => {
             };
         }
 
+        // Game Session Management - Tek kullanımlık bilet sistemi
+        if (path.includes('/game-session/start') && httpMethod === 'POST') {
+            console.log('🎫 Processing game session start request');
+            
+            // Get authorization header
+            const authHeader = event.headers.authorization || event.headers.Authorization;
+            if (!authHeader || !authHeader.startsWith('Bearer ')) {
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'No authorization token' })
+                };
+            }
+            
+            const token = authHeader.substring(7);
+            
+            // Verify token and get user
+            const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+            
+            if (authError || !user) {
+                console.error('❌ Auth error:', authError?.message);
+                return {
+                    statusCode: 401,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Invalid token' })
+                };
+            }
+            
+            // Generate unique session token
+            const sessionToken = `game_${user.id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            
+            // Save session to database
+            const { data: sessionData, error: sessionError } = await supabase
+                .from('game_sessions')
+                .insert({
+                    user_id: user.id,
+                    token: sessionToken,
+                    status: 'active',
+                    created_at: new Date().toISOString()
+                })
+                .select()
+                .single();
+            
+            if (sessionError) {
+                console.error('❌ Session creation error:', sessionError);
+                return {
+                    statusCode: 500,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Failed to create game session' })
+                };
+            }
+            
+            console.log('✅ Game session created:', sessionToken);
+            
+            return {
+                statusCode: 200,
+                headers,
+                body: JSON.stringify({ 
+                    success: true, 
+                    sessionToken: sessionToken 
+                })
+            };
+        }
+
         if (path.includes('/leaderboard') && httpMethod === 'GET') {
             console.log('🏆 Processing leaderboard request');
             
@@ -430,32 +494,22 @@ exports.handler = async (event, context) => {
             console.log('💾 Processing save score request');
             console.log('📊 Received data:', data);
             
-            const { score, optiEarned, gameDuration, jumpCount } = data;
+            const { score, optiEarned, gameDuration, jumpCount, sessionToken } = data;
             
             console.log('📊 Parsed values:');
             console.log('- score:', score, typeof score);
             console.log('- optiEarned:', optiEarned, typeof optiEarned);
             console.log('- gameDuration:', gameDuration, typeof gameDuration);
             console.log('- jumpCount:', jumpCount, typeof jumpCount);
+            console.log('- sessionToken:', sessionToken, typeof sessionToken);
             
-            // Basic validation
-            if (typeof score !== 'number' || score < 0 || score > 1000000) {
+            // Session token validation - Tek kullanımlık bilet kontrolü
+            if (!sessionToken) {
+                console.error('❌ No session token provided');
                 return {
                     statusCode: 400,
                     headers,
-                    body: JSON.stringify({ success: false, error: 'Invalid score' })
-                };
-            }
-            
-            // ---- İŞTE EN ÖNEMLİ KISIM BURASI ----
-            // Gelen skoru "sahtekarlık dedektörümüzden" geçiriyoruz.
-            if (!isScoreValid(score, gameDuration, optiEarned, jumpCount)) {
-                // Eğer skor geçerli değilse, hatayla geri dön ve işlemi durdur.
-                console.error('❌ Score validation failed - invalid score data');
-                return {
-                    statusCode: 400, // Bad Request (Hatalı İstek)
-                    headers,
-                    body: JSON.stringify({ success: false, error: 'Geçersiz skor verisi.' })
+                    body: JSON.stringify({ success: false, error: 'Session token required' })
                 };
             }
             
@@ -480,6 +534,56 @@ exports.handler = async (event, context) => {
                     statusCode: 401,
                     headers,
                     body: JSON.stringify({ success: false, error: 'Invalid token' })
+                };
+            }
+            
+            // Session token validation - Bilet kontrolü
+            console.log('🎫 Validating session token:', sessionToken);
+            const { data: session, error: sessionError } = await supabase
+                .from('game_sessions')
+                .select('*')
+                .eq('token', sessionToken)
+                .eq('user_id', user.id)
+                .eq('status', 'active')
+                .single();
+            
+            if (sessionError || !session) {
+                console.error('❌ Invalid or expired session token:', sessionError?.message);
+                return {
+                    statusCode: 403,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Geçersiz oyun oturumu.' })
+                };
+            }
+            
+            console.log('✅ Session token validated:', session.id);
+            
+            // Invalidate session token immediately - Tek kullanımlık
+            await supabase
+                .from('game_sessions')
+                .update({ status: 'used' })
+                .eq('id', session.id);
+            
+            console.log('🎫 Session token invalidated');
+            
+            // Basic validation
+            if (typeof score !== 'number' || score < 0 || score > 1000000) {
+                return {
+                    statusCode: 400,
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Invalid score' })
+                };
+            }
+            
+            // ---- İŞTE EN ÖNEMLİ KISIM BURASI ----
+            // Gelen skoru "sahtekarlık dedektörümüzden" geçiriyoruz.
+            if (!isScoreValid(score, gameDuration, optiEarned, jumpCount)) {
+                // Eğer skor geçerli değilse, hatayla geri dön ve işlemi durdur.
+                console.error('❌ Score validation failed - invalid score data');
+                return {
+                    statusCode: 400, // Bad Request (Hatalı İstek)
+                    headers,
+                    body: JSON.stringify({ success: false, error: 'Geçersiz skor verisi.' })
                 };
             }
             

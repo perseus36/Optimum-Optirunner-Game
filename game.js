@@ -74,6 +74,7 @@ class Game {
         this.jumpCount = 0;
         this.totalGameTime = 0;
         this.lastTime = 0; // Delta time için
+        this.currentGameSessionToken = null; // Tek kullanımlık oyun bileti
 
         this.username = localStorage.getItem('username') || '';
         this.leaderboardVisible = false;
@@ -732,10 +733,22 @@ class Game {
         }
     }
     
-    startGame() {
+    async startGame() {
         // Check if user is signed in
         if (!window.authFunctions || !window.authFunctions.isSignedIn()) {
             alert('Please sign in with Google to play the game!');
+            return;
+        }
+        
+        // Sunucudan yeni oyun bileti iste
+        try {
+            console.log('🎫 Requesting new game session token...');
+            this.currentGameSessionToken = await window.authFunctions.startNewGameSession();
+            console.log('✅ New game session token received:', this.currentGameSessionToken);
+        } catch (error) {
+            console.error('❌ Failed to get game session token:', error);
+            alert('Sunucuyla bağlantı kurulamadı. Lütfen sayfayı yenileyin.');
+            this.gameRunning = false; // Oyunu durdur
             return;
         }
         
@@ -780,6 +793,7 @@ class Game {
         this.obstacleSpawnRate = this.baseObstacleSpawnRate;
         this.currentObstacleSpeedMultiplier = 1;
         this.lastTime = 0; // Reset delta time system
+        this.currentGameSessionToken = null; // Reset session token
         this.gameStartTime = 0; // Record when game started (delta time)
         this.totalGameTime = 0; // Reset total game time (delta time)
         this.speedIncreaseStarted = false; // Reset speed increase flag
@@ -880,6 +894,7 @@ class Game {
         this.obstacleSpawnRate = this.baseObstacleSpawnRate;
         this.currentObstacleSpeedMultiplier = 1;
         this.lastTime = 0; // Reset delta time system
+        this.currentGameSessionToken = null; // Reset session token
         this.gameStartTime = 0;
         this.totalGameTime = 0; // Reset total game time (delta time)
         this.speedIncreaseStarted = false;
@@ -2289,7 +2304,8 @@ class Game {
                     this.score, 
                     optiEarned, 
                     this.totalGameTime, 
-                    this.jumpCount
+                    this.jumpCount,
+                    this.currentGameSessionToken // Tek kullanımlık oyun bileti
                 );
                 
                 if (leaderboardResult.success) {

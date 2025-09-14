@@ -1,3 +1,6 @@
+// 1. Adım: Tüm kodu özel bir "balon" içine alıyoruz (IIFE başlangıcı)
+(function() {
+
 // Game starts here
 
 class Game {
@@ -3334,3 +3337,6 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 });
+
+// 2. Adım: IIFE'nin sonu - "balon" kapatılıyor
+})();

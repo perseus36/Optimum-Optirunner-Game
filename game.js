@@ -1,6 +1,47 @@
 // 1. Adım: Tüm kodu özel bir "balon" içine alıyoruz (IIFE başlangıcı)
 (function() {
 
+// Güvenlik dedektörümüz: Gelen skorun mantıklı olup olmadığını kontrol eder.
+const isScoreValid = (score, gameDuration, optiEarned, jumpCount) => {
+  const durationInSeconds = gameDuration / 1000;
+
+  // Kural 1: Oyun en az 5 saniye sürmüş olmalı.
+  if (durationInSeconds < 5) {
+    console.warn(`[Hile Tespiti] Reddedildi: Oyun süresi çok kısa (${durationInSeconds}s).`);
+    return false;
+  }
+
+  // Kural 2: Süreye göre maksimum skor. Saniyede 1.5 puandan fazla olamaz.
+  const maxPossibleScore = (durationInSeconds * 1.5) + 10;
+  if (score > maxPossibleScore) {
+    console.warn(`[Hile Tespiti] Reddedildi: Skor (${score}), süreye (${durationInSeconds}s) göre çok yüksek.`);
+    return false;
+  }
+
+  // Kural 3: Zıplama başına düşen skor oranı. Ortalama 3'ten fazla olamaz.
+  // Bu, "God Mode" ile hiç zıplamadan veya az zıplayarak kasılan skorları yakalar.
+  if (jumpCount > 0 && (score / jumpCount) > 3) {
+      console.warn(`[Hile Tespiti] Reddedildi: Zıplama başına düşen skor (${(score / jumpCount).toFixed(2)}) çok yüksek.`);
+      return false;
+  }
+  
+  // Kural 4: Yüksek skora rağmen çok az zıplama.
+  if (score > 50 && jumpCount < 10) {
+      console.warn(`[Hile Tespiti] Reddedildi: Yüksek skora (${score}) rağmen çok az zıplama (${jumpCount}).`);
+      return false;
+  }
+
+  // Kural 5: $OPTI puanı kontrolü. 5 saniyede 1'den fazla olamaz.
+  const maxPossibleOpti = Math.floor(durationInSeconds / 5) + 2;
+  if (optiEarned > maxPossibleOpti) {
+    console.warn(`[Hile Tespiti] Reddedildi: Kazanılan $OPTI (${optiEarned}) süreye göre çok yüksek.`);
+    return false;
+  }
+  
+  console.log(`[Skor Doğrulandı] Skor: ${score}, Süre: ${durationInSeconds.toFixed(1)}s`);
+  return true; // Bütün kontrollerden geçti, skor güvenilir.
+};
+
 // Game starts here
 
 class Game {

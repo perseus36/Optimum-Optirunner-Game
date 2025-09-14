@@ -905,17 +905,19 @@ class Game {
         this.obstacles.push(obstacle);
         
         // Calculate random distance for next obstacle (same as normal spawn system)
-        const minDistance = Math.floor(this.obstacleSpawnRate * 0.8); // 20% shorter (96 frames)
-        const maxDistance = Math.floor(this.obstacleSpawnRate * 1.25); // 25% longer (150 frames)
+        const minDistance = Math.floor(this.obstacleSpawnRate * 0.8); // 20% shorter (1600ms)
+        const maxDistance = Math.floor(this.obstacleSpawnRate * 1.25); // 25% longer (2500ms)
         const randomDistance = Math.floor(Math.random() * (maxDistance - minDistance + 1)) + minDistance;
         
-        // Set the spawn frame so next obstacle appears at correct distance
-        this.lastObstacleSpawnFrame = this.frameCount - randomDistance;
+        // Set the spawn time so next obstacle appears at correct distance
+        this.lastObstacleSpawnTime = this.totalGameTime - randomDistance;
         
         // Create optimum logo between first and second obstacles
         const firstObstacleX = this.width / 2;
-        const secondObstacleX = firstObstacleX + (randomDistance * this.obstacleSpeed * this.currentObstacleSpeedMultiplier);
-        const optimumX = firstObstacleX + (secondObstacleX - firstObstacleX) / 2 + (90 * this.obstacleSpeed * this.currentObstacleSpeedMultiplier) - 20; // 90 frames more to the right - 20px left (10 frames more to the left)
+        // Convert time-based distance to pixel distance
+        const pixelDistance = (randomDistance / 1000) * (this.obstacleSpeed * this.currentObstacleSpeedMultiplier) * 60; // Convert ms to pixels
+        const secondObstacleX = firstObstacleX + pixelDistance;
+        const optimumX = firstObstacleX + (secondObstacleX - firstObstacleX) / 2 + (1500 / 1000) * (this.obstacleSpeed * this.currentObstacleSpeedMultiplier) * 60 - 20; // 1.5 seconds more to the right - 20px left
         const optimumY = this.ground - 72 - 144 - 80; // 2x obstacle height above ground + 80px up (60px + 20px)
         
         this.optimumLogo = {
@@ -926,7 +928,7 @@ class Game {
             visible: true
         };
         
-        console.log(`First obstacle spawned at center of screen! Next obstacle in ${randomDistance} frames`);
+        console.log(`First obstacle spawned at center of screen! Next obstacle in ${randomDistance}ms`);
     }
     
     jump() {
